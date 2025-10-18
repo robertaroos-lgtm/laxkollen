@@ -68,7 +68,7 @@
 
     .totals { margin:8px 0 8px; font-size:14px; color:#374151; background:#f8fafc; border:1px solid #eef0f5; border-radius:10px; padding:8px 12px; }
 
-    /* Lista */
+    /* Lista: (5 kolumner på desktop) [ghost, progress, text, exam, knappar] */
     ul { list-style:none; padding:0; margin:0; }
     li { 
       display:grid; 
@@ -127,6 +127,104 @@
       font-size:14px; z-index:9999;
     }
     .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+    /* ===== Mobilanpassning för iPhone (minimal patch) ===== */
+    @media (max-width: 420px) {
+      body { font-size: 15px; }
+      .app { margin: 8px; padding: 14px; border-radius: 14px; }
+
+      h1 { font-size: 20px; margin-bottom: 8px; }
+      .topbar { gap: 8px; margin-bottom: 6px; }
+      .actions-row { margin-bottom: 8px; }
+
+      button { padding: 9px 12px; border-radius: 10px; }
+      select, input[type="text"], input[type="date"], input[type="number"] {
+        padding: 8px; font-size: 15px; border-radius: 10px;
+      }
+
+      .summary { 
+        grid-template-columns: repeat(2, minmax(0, 1fr)); 
+        gap: 8px; 
+        margin: 8px 0 10px;
+      }
+      @media (max-width: 340px) {
+        .summary { grid-template-columns: 1fr; }
+      }
+      .card { padding: 10px; border-radius: 12px; }
+
+      .row.compact-gap { gap: 6px; }
+      #input-row { 
+        display: grid; 
+        grid-template-columns: 1fr 1fr; 
+        gap: 8px; 
+      }
+      #input-row .field { min-width: 0; }
+      #input-row .field.prov { 
+        grid-column: span 1; 
+        min-width: 36px; width: 36px; 
+      }
+      #input-row .field:last-child { 
+        grid-column: 1 / -1; 
+        display: flex; justify-content: flex-end; 
+      }
+
+      .row .chip { padding: 5px 10px; }
+      .row { gap: 8px; }
+
+      .totals { padding: 8px 10px; font-size: 13px; }
+
+      /* Lista – komprimera */
+      ul { margin-top: 6px; }
+      /* Dölj ghost-celler (den första och ev. andra) på mobil */
+      .ghost-cell { display: none !important; }
+
+      /* Två kolumner: text/meta + knappar */
+      li {
+        grid-template-columns: 1fr auto;
+        grid-auto-rows: auto;
+        gap: 8px;
+        padding: 10px;
+        border-radius: 12px;
+      }
+
+      /* Textwrap först */
+      li > div:nth-of-type(1) { /* textWrap blir första div:en vi lägger in (se JS) */
+        grid-column: 1; grid-row: 1;
+      }
+      .meta-line { grid-column: 1; grid-row: 2; font-size: 12px; color: #4b5563; }
+      .due-badge { font-size: 11px; padding: 1px 6px; }
+
+      /* Exam-badge under/vid textwrap */
+      .exam-badge { font-size: 10px; padding: 1px 6px; border-radius: 5px; }
+      /* Knappar i kolumn 2, vertikal stack */
+      li > div.buttons-col { 
+        grid-column: 2; grid-row: 1 / span 2; 
+        display: flex; flex-direction: column; 
+        gap: 6px; align-items: flex-end; 
+      }
+      .icon-btn { width: 30px; height: 30px; border-radius: 8px; }
+
+      li.overdue { border-color: #fca5a5; }
+      li.today { border-color: #93c5fd; }
+
+      .modal { 
+        width: 100%; max-width: 100%; 
+        height: 92vh; max-height: 92vh; 
+        border-radius: 14px; padding: 12px; 
+        overflow: auto; 
+      }
+      .subjects-collection { gap: 6px; }
+      .subjects-group { gap: 2px; }
+      .subject-row { gap: 4px; }
+      .sub-chip { padding: 3px 7px; font-size: 12px; }
+
+      .modal-actions { 
+        position: sticky; bottom: 0; 
+        background: #fff; 
+        padding-top: 8px; 
+        margin-top: 8px; 
+      }
+    }
   </style>
 </head>
 <body>
@@ -487,39 +585,8 @@ function tick(id){
   }
 }
 
-function onCheckboxChange(id, isChecked){
-  const s = state();
-  const t = s.todos.find(x=>x.id===id);
-  if(!t) return;
-
-  if(t.isExam){ renderAll(); showToast("Prov bockas inte av manuellt"); return; }
-
-  if(isChecked){
-    if(!t.done){
-      if(t.timesLeft > 1){
-        t.timesLeft--;
-        saveStore(); renderAll();
-        const total = t.timesTotal || Math.max(1, t.timesLeft||1);
-        const doneCount = Math.max(0, total - (t.timesLeft ?? total));
-        showToast(`Omgång avklarad (${doneCount}/${total} gjorda)`);
-      } else {
-        t.timesLeft = 0;
-        t.done = true;
-        t.completedOn = todayLocalISO();
-        saveStore(); renderAll();
-        showToast("Läxa klar!");
-      }
-    }
-  } else {
-    if(t.done){
-      t.done = false;
-      t.completedOn = null;
-      t.timesLeft = Math.max(1, t.timesLeft || 1);
-      saveStore(); renderAll();
-      showToast("Klarmarkering ångrad");
-    }
-  }
-}
+/* Checkbox tas bort – funktionen finns kvar om du vill återaktivera i framtiden */
+function onCheckboxChange(){}
 
 function removeItem(id){
   const s = state();
@@ -542,7 +609,6 @@ function openEditModal(id){
   if(!t) return;
   editingId = id;
 
-  // Fyll ämneslistan med barnets aktiva ämnen
   editSubject.innerHTML = "";
   s.subjects.forEach(sub=>{
     const opt=document.createElement("option");
@@ -599,7 +665,6 @@ function saveEditChanges(){
     return;
   }
 
-  // Justera repetition & status
   if(newIsExam){
     t.timesTotal = 1;
     t.timesLeft  = t.done ? 0 : 1;
@@ -616,7 +681,6 @@ function saveEditChanges(){
     t.timesLeft  = newLeft;
   }
 
-  // Spara övriga fält
   t.subj = newSubj;
   t.task = newTask;
   t.isExam = newIsExam;
@@ -691,7 +755,7 @@ function setActiveChip(filter){
 
 function renderSummary(){
   const s = state();
-  const focused = s.focusedSubject || ""; // "" = Totalt
+  const focused = s.focusedSubject || "";
   const totalKvar = s.todos.filter(t=>!t.done).length;
 
   subjectSummary.innerHTML = "";
@@ -773,6 +837,7 @@ function renderList(){
   const dateKey = filterDate.value || "";
   const todayISO = todayLocalISO();
   const today = isoToDate(todayISO);
+  const isNarrow = window.matchMedia("(max-width: 420px)").matches;
 
   const items = s.todos.filter(t=>{
     if(subjFocus && t.subj !== subjFocus) return false;
@@ -814,31 +879,24 @@ function renderList(){
     if(t.done) li.classList.add("done");
     if(t.isExam) li.classList.add("exam");
 
-    /* 1) Checkbox / ghost */
-    if(!t.isExam){
-      const cb=document.createElement("input");
-      cb.type="checkbox";
-      cb.checked=t.done;
-      cb.title = t.done ? "Avmarkera som klar" : "Markera en omgång klar (eller hela läxan)";
-      cb.onchange=(e)=>onCheckboxChange(t.id, e.target.checked);
-      li.appendChild(cb);
-    } else {
-      const ghost1 = document.createElement("div"); ghost1.className="ghost-cell"; li.appendChild(ghost1);
-    }
+    /* (1) Ghost-cell i stället för checkbox-kolumn */
+    const ghost1 = document.createElement("div");
+    ghost1.className="ghost-cell";
+    li.appendChild(ghost1);
 
-    /* 2) Progress / ghost */
+    /* (2) Progress / ghost */
     if(!t.isExam && (t.timesTotal||1) > 1){
       const prog=document.createElement("span");
       const total = t.timesTotal || Math.max(1, t.timesLeft||1);
       const doneCount = Math.max(0, total - (t.timesLeft ?? total));
       prog.className="progress-badge";
-      prog.textContent = `${doneCount}/${total} gjorda`;
+      prog.textContent = isNarrow ? `${doneCount}/${total}` : `${doneCount}/${total} gjorda`; // JS-puts
       li.appendChild(prog);
     } else {
       const ghost2 = document.createElement("div"); ghost2.className="ghost-cell"; li.appendChild(ghost2);
     }
 
-    /* 3) Text + meta */
+    /* (3) Text + meta */
     const textWrap=document.createElement("div");
     const text=document.createElement("div"); text.className="text";
     text.textContent=`${subjectIcons[t.subj]||"📘"} ${t.subj}: ${t.task}`;
@@ -858,7 +916,7 @@ function renderList(){
     textWrap.appendChild(meta);
     li.appendChild(textWrap);
 
-    /* 4) Exam-badge */
+    /* (4) Exam-badge */
     const examWrap = document.createElement("div");
     if(t.isExam){
       const examB = document.createElement("span");
@@ -868,13 +926,15 @@ function renderList(){
     }
     li.appendChild(examWrap);
 
-    /* 5) Knappar: ✔️ (om läxa) • ⚙️ • 🗑️ */
+    /* (5) Knappar: ✔️ (endast läxa) • ⚙️ • 🗑️ */
     const btns=document.createElement("div");
+    btns.className="buttons-col";
+
     if(!t.isExam){
       const tickBtn=document.createElement("button"); 
       tickBtn.textContent="✔️"; 
       tickBtn.className="icon-btn"; 
-      tickBtn.title="Bocka av en omgång"; 
+      tickBtn.title="Bocka av en omgång / markera klar"; 
       tickBtn.onclick=()=>tick(t.id);
       btns.appendChild(tickBtn);
     }
@@ -998,7 +1058,6 @@ function openModal(isOnboarding=false){
 function closeModal(){
   if(!hasAnyChild()){ return; }
 
-  // Samla val per barn från chips
   const selections = {};
   Object.keys(store.children).forEach(n=> selections[n]=[]);
   const activeChips = Array.from(document.querySelectorAll('#children-list .sub-chip.active[data-child]'));
@@ -1105,7 +1164,6 @@ function addNewChild(){
 
   showToast(`Lade till ${name}`);
 
-  // Låt dialogen vara kvar så man kan lägga till fler barn
   newChildName.value = "";
   newChildSubjects.innerHTML = "";
   buildSubjectsRows(newChildSubjects);
