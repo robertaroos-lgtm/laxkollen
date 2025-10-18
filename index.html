@@ -107,7 +107,15 @@
     .subjects-collection { display:flex; flex-direction:column; gap:8px; width:100%; }
     .subjects-group { display:flex; flex-direction:column; gap:4px; }
     .group-header { font-weight:700; color:#374151; }
-    .subject-row { display:flex; gap:6px; overflow-x:auto; white-space:nowrap; padding-bottom:4px; }
+    .subject-row {
+  display:flex;
+  flex-wrap: wrap;   /* ✅ radbryt chipen istället för sidscroll */
+  gap:6px;
+  padding-bottom:4px;
+  overflow-x: visible;  /* ingen horisontell scroll */
+  white-space: normal;  /* tillåt radbrytning */
+}
+ }
     .sub-chip { display:inline-flex; align-items:center; gap:6px; background:#eef0f6; border:1px solid #e5e7eb; padding:4px 8px; border-radius:999px; font-size:12px; cursor:pointer; user-select:none; }
     .sub-chip.active { background:#6366f1; color:#fff; border-color:#6366f1; }
     .modal-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:10px; }
@@ -906,8 +914,7 @@ function renderList(){
     const dueLabel = computeDueLabel(t, todayISO, dateNice);
     const dueClass  = computeDueClass(t, todayISO);
     meta.innerHTML = dueLabel ? `<span class="due-badge ${dueClass}">${dueLabel}</span>` : "";
-    if(!t.isExam && (t.timesTotal||1) > 1){
-      meta.innerHTML += ` • Gång kvar: ${t.timesLeft}`;
+   
     }
     if(t.done && t.completedOn){
       meta.innerHTML += ` • Klar: ${formatDate(t.completedOn)}`;
