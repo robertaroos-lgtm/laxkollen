@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Läxkollen</title>
 
-  <!-- PWA: manifest + färg + iOS-webapp -->
+  <!-- PWA -->
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#6366f1">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
@@ -13,7 +13,6 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
 
   <style>
-    /* Safe area (iPhone helskärm) */
     :root { --safe-bottom: env(safe-area-inset-bottom); }
     body { font-family: sans-serif; background:#f6f7fb; margin:0; color:#111827; padding-bottom:var(--safe-bottom, 0); }
     input, select, button, textarea { font-family: inherit; }
@@ -24,7 +23,6 @@
 
     .topbar { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:8px; }
     .topbar .spacer { flex:1; }
-
     .actions-row { display:flex; justify-content:flex-start; gap:8px; margin:0 0 12px; }
 
     select, input[type="text"], input[type="date"], input[type="number"] {
@@ -53,11 +51,10 @@
 
     .row { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px; }
     .row.compact-gap { gap:4px; }
-
     .field { display:flex; flex-direction:column; flex:1; min-width:160px; }
     .field label { font-size:13px; font-weight:600; margin-bottom:4px; color:#374151; }
 
-    /* PROV-fält: kompakt */
+    /* PROV kompakt */
     .field.prov { flex:0 0 auto; min-width:44px; width:44px; }
     .field.prov label { margin-bottom:2px; }
     .field.prov .checkline { display:flex; align-items:center; justify-content:flex-start; gap:0; padding:0; margin:0; }
@@ -68,7 +65,7 @@
 
     .totals { margin:8px 0 8px; font-size:14px; color:#374151; background:#f8fafc; border:1px solid #eef0f5; border-radius:10px; padding:8px 12px; }
 
-    /* Lista: (5 kolumner på desktop) [ghost, progress, text, exam, knappar] */
+    /* Lista (ghost, progress, text, exam, knappar) */
     ul { list-style:none; padding:0; margin:0; }
     li { 
       display:grid; 
@@ -97,25 +94,27 @@
     .exam-badge { font-size:11px; font-weight:800; letter-spacing:.3px; color:#7c2d12;
       background:#fde68a; border:1px solid #f59e0b; border-radius:6px; padding:2px 6px; white-space:nowrap; }
 
-    /* Modal (både “Hantera barn” och “Redigera”) */
+    /* Modal */
     .modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,.25); display:none; align-items:center; justify-content:center; padding:16px; z-index:50; }
     .modal { width:min(820px, 100%); background:#fff; border-radius:16px; padding:16px; box-shadow:0 20px 60px rgba(0,0,0,.25); max-height:90vh; overflow:auto; }
     .modal h2 { margin:0 0 8px; }
 
-    /* Hantera barn – chipsgrupper */
+    /* Hantera barn – grupper och knappar */
     .child-row { display:flex; gap:10px; align-items:flex-start; flex-direction:column; margin:8px 0; padding:10px; border:1px solid #eef0f5; border-radius:12px; background:#fafbff; }
     .subjects-collection { display:flex; flex-direction:column; gap:8px; width:100%; }
     .subjects-group { display:flex; flex-direction:column; gap:4px; }
     .group-header { font-weight:700; color:#374151; }
+
+    /* ⬇️ Ingen sidscroll – vi radbryter knapparna */
     .subject-row {
-  display:flex;
-  flex-wrap: wrap;   /* ✅ radbryt chipen istället för sidscroll */
-  gap:6px;
-  padding-bottom:4px;
-  overflow-x: visible;  /* ingen horisontell scroll */
-  white-space: normal;  /* tillåt radbrytning */
-}
- }
+      display:flex;
+      flex-wrap: wrap;      /* radbryt ämnesknappar */
+      gap:6px;
+      padding-bottom:4px;
+      overflow-x: visible;  /* ingen horisontell scroll */
+      white-space: normal;  /* tillåt radbrytning */
+    }
+
     .sub-chip { display:inline-flex; align-items:center; gap:6px; background:#eef0f6; border:1px solid #e5e7eb; padding:4px 8px; border-radius:999px; font-size:12px; cursor:pointer; user-select:none; }
     .sub-chip.active { background:#6366f1; color:#fff; border-color:#6366f1; }
     .modal-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:10px; }
@@ -136,11 +135,10 @@
     }
     .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
 
-    /* ===== Mobilanpassning för iPhone (minimal patch) ===== */
+    /* ===== Mobil ===== */
     @media (max-width: 420px) {
       body { font-size: 15px; }
       .app { margin: 8px; padding: 14px; border-radius: 14px; }
-
       h1 { font-size: 20px; margin-bottom: 8px; }
       .topbar { gap: 8px; margin-bottom: 6px; }
       .actions-row { margin-bottom: 8px; }
@@ -150,43 +148,24 @@
         padding: 8px; font-size: 15px; border-radius: 10px;
       }
 
-      .summary { 
-        grid-template-columns: repeat(2, minmax(0, 1fr)); 
-        gap: 8px; 
-        margin: 8px 0 10px;
-      }
-      @media (max-width: 340px) {
-        .summary { grid-template-columns: 1fr; }
-      }
+      .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 8px 0 10px; }
+      @media (max-width: 340px) { .summary { grid-template-columns: 1fr; } }
       .card { padding: 10px; border-radius: 12px; }
 
       .row.compact-gap { gap: 6px; }
-      #input-row { 
-        display: grid; 
-        grid-template-columns: 1fr 1fr; 
-        gap: 8px; 
-      }
+      #input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
       #input-row .field { min-width: 0; }
-      #input-row .field.prov { 
-        grid-column: span 1; 
-        min-width: 36px; width: 36px; 
-      }
-      #input-row .field:last-child { 
-        grid-column: 1 / -1; 
-        display: flex; justify-content: flex-end; 
-      }
+      #input-row .field.prov { grid-column: span 1; min-width: 36px; width: 36px; }
+      #input-row .field:last-child { grid-column: 1 / -1; display: flex; justify-content: flex-end; }
 
       .row .chip { padding: 5px 10px; }
       .row { gap: 8px; }
 
       .totals { padding: 8px 10px; font-size: 13px; }
 
-      /* Lista – komprimera */
       ul { margin-top: 6px; }
-      /* Dölj ghost-celler (den första och ev. andra) på mobil */
       .ghost-cell { display: none !important; }
 
-      /* Två kolumner: text/meta + knappar */
       li {
         grid-template-columns: 1fr auto;
         grid-auto-rows: auto;
@@ -195,43 +174,24 @@
         border-radius: 12px;
       }
 
-      /* Textwrap först */
-      li > div:nth-of-type(1) { /* textWrap blir första div:en vi lägger in (se JS) */
-        grid-column: 1; grid-row: 1;
-      }
+      li > div:nth-of-type(1) { grid-column: 1; grid-row: 1; }
       .meta-line { grid-column: 1; grid-row: 2; font-size: 12px; color: #4b5563; }
       .due-badge { font-size: 11px; padding: 1px 6px; }
-
-      /* Exam-badge under/vid textwrap */
       .exam-badge { font-size: 10px; padding: 1px 6px; border-radius: 5px; }
-      /* Knappar i kolumn 2, vertikal stack */
-      li > div.buttons-col { 
-        grid-column: 2; grid-row: 1 / span 2; 
-        display: flex; flex-direction: column; 
-        gap: 6px; align-items: flex-end; 
-      }
+
+      li > div.buttons-col { grid-column: 2; grid-row: 1 / span 2; display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
       .icon-btn { width: 30px; height: 30px; border-radius: 8px; }
 
       li.overdue { border-color: #fca5a5; }
       li.today { border-color: #93c5fd; }
 
-      .modal { 
-        width: 100%; max-width: 100%; 
-        height: 92vh; max-height: 92vh; 
-        border-radius: 14px; padding: 12px; 
-        overflow: auto; 
-      }
+      .modal { width: 100%; max-width: 100%; height: 92vh; max-height: 92vh; border-radius: 14px; padding: 12px; overflow: auto; }
       .subjects-collection { gap: 6px; }
       .subjects-group { gap: 2px; }
-      .subject-row { gap: 4px; }
+      .subject-row { gap: 4px; } /* behåller wrap, bara tajtare gap */
       .sub-chip { padding: 3px 7px; font-size: 12px; }
 
-      .modal-actions { 
-        position: sticky; bottom: 0; 
-        background: #fff; 
-        padding-top: 8px; 
-        margin-top: 8px; 
-      }
+      .modal-actions { position: sticky; bottom: 0; background: #fff; padding-top: 8px; margin-top: 8px; }
     }
   </style>
 </head>
@@ -239,63 +199,48 @@
 <div class="app">
   <h1>Läxkollen</h1>
 
-  <!-- Barnväljare -->
   <div class="topbar">
-    <div>
-      <select id="child-select" aria-label="Välj barn"></select>
-    </div>
+    <div><select id="child-select" aria-label="Välj barn"></select></div>
     <button id="manage-children" class="ghost">Hantera barn</button>
     <div class="spacer"></div>
   </div>
 
-  <!-- Ny läxa/prov-knapp -->
   <div class="actions-row">
     <button id="add-quick" class="primary" aria-expanded="false" aria-controls="input-row">Lägg till läxa/prov</button>
   </div>
 
-  <!-- Översikt -->
   <div id="subject-summary" class="summary" aria-label="Översikt per ämne"></div>
 
-  <!-- Inmatning (gömd som default) -->
   <div id="input-row" class="row compact-gap" hidden>
     <div class="field">
       <label for="subject">Ämne</label>
       <select id="subject"></select>
     </div>
-
     <div class="field">
       <label for="task">Läxa</label>
       <input id="task" type="text" placeholder="Beskriv läxan"/>
     </div>
-
     <div class="field prov">
       <label for="is-exam">Prov</label>
-      <div class="checkline">
-        <input id="is-exam" type="checkbox" />
-      </div>
+      <div class="checkline"><input id="is-exam" type="checkbox"/></div>
     </div>
-
     <div class="field">
       <label for="due">Datum</label>
       <input id="due" type="date"/>
     </div>
-
     <div class="field">
       <label for="times">Antal repitioner</label>
       <input id="times" type="number" min="1" value="1"/>
     </div>
-
     <div class="field" style="justify-content:flex-end;">
       <button id="add" class="primary" disabled aria-disabled="true">Lägg till</button>
     </div>
   </div>
 
-  <!-- Filter-rad -->
   <div class="row">
     <span class="chip active" data-filter="active">Kvar att göra</span>
     <span class="chip" data-filter="exam">Prov</span>
     <span class="chip" data-filter="done">Historik</span>
-
     <select id="filter-date" title="Filtrera datum"></select>
   </div>
 
@@ -303,13 +248,12 @@
   <ul id="list"></ul>
 </div>
 
-<!-- Modal: Hantera barn -->
+<!-- Hantera barn -->
 <div id="modal-backdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="manage-title">
   <div class="modal">
     <h2 id="manage-title">Hantera barn</h2>
     <div class="note" id="onboarding-note" style="display:none;">Välkommen! Börja med att lägga till ett barn och välja ämnen. Du kan inte stänga förrän minst ett barn finns.</div>
 
-    <!-- Lägg till nytt barn (överst) -->
     <div style="margin-top:10px;">
       <strong>Lägg till nytt barn</strong>
       <div class="child-row">
@@ -318,7 +262,6 @@
         <button id="save-new-child" class="primary">Lägg till barn</button>
       </div>
 
-      <!-- Åtgärdsknappar nära add-sektionen -->
       <div class="modal-actions">
         <button id="cancel-modal" class="ghost">Avbryt</button>
         <button id="close-modal" class="primary">Spara och Stäng</button>
@@ -327,7 +270,6 @@
 
     <hr style="border:none;border-top:1px solid #eee;margin:12px 0;">
 
-    <!-- Aktuella barn (underst) -->
     <div>
       <strong>Aktuella barn</strong>
       <div id="children-list"></div>
@@ -335,7 +277,7 @@
   </div>
 </div>
 
-<!-- Modal: Redigera läxa/prov -->
+<!-- Redigera -->
 <div id="edit-backdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="edit-title">
   <div class="modal" style="max-width:640px">
     <h2 id="edit-title">Redigera</h2>
@@ -352,9 +294,7 @@
     <div class="row compact-gap">
       <div class="field prov">
         <label for="edit-is-exam">Prov</label>
-        <div class="checkline">
-          <input id="edit-is-exam" type="checkbox"/>
-        </div>
+        <div class="checkline"><input id="edit-is-exam" type="checkbox"/></div>
       </div>
       <div class="field">
         <label for="edit-due">Datum</label>
@@ -372,11 +312,10 @@
   </div>
 </div>
 
-<!-- Toast -->
 <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
 <script>
-/* ===== Ämnesgrupper + ikoner ===== */
+/* ===== Ämnen ===== */
 const SUBJECT_GROUPS = [
   { title: "Språk", items: ["Franska","Engelska","Spanska","Svenska","Italienska","Tyska"] },
   { title: "NO", items: ["Biologi","Fysik","Kemi","Naturkunskap","NO"] },
@@ -386,7 +325,6 @@ const SUBJECT_GROUPS = [
   { title: "Gymnasieämnen", items: ["Juridik","Företagsekonomi","Psykologi","Filosofi"] }
 ];
 const ALL_SUBJECTS = SUBJECT_GROUPS.flatMap(g=>g.items);
-
 const subjectIcons={
   "Franska":"🇫🇷","Engelska":"🇬🇧","Spanska":"🇪🇸","Svenska":"🇸🇪","Italienska":"🇮🇹","Tyska":"🇩🇪",
   "Biologi":"🧬","Fysik":"⚛️","Kemi":"⚗️","Naturkunskap":"🌿","NO":"🔬",
@@ -397,34 +335,26 @@ const subjectIcons={
 };
 
 const STORAGE_KEY="läxkollen-multi-children-v1";
-
-/* ===== Store ===== */
-let store = loadStore();
-migrateStore();
-
-/* ===== Modal-snapshot för Avbryt ===== */
+let store = loadStore(); migrateStore();
 let modalSnapshot = null;
 
-/* ===== Element ===== */
+/* Elements */
 const childSelect = document.getElementById("child-select");
 const subjectSelect = document.getElementById("subject");
 const taskInput = document.getElementById("task");
 const dueInput = document.getElementById("due");
 const timesInput = document.getElementById("times");
 const isExamInput = document.getElementById("is-exam");
-
 const addBtn = document.getElementById("add");
 const addQuickBtn = document.getElementById("add-quick");
 const inputRow = document.getElementById("input-row");
-
 const chips = Array.from(document.querySelectorAll(".chip"));
 const filterDate = document.getElementById("filter-date");
-
 const subjectSummary = document.getElementById("subject-summary");
 const totalsEl = document.getElementById("totals");
 const listEl = document.getElementById("list");
 
-/* Hantera barn modal */
+/* Modal Hantera barn */
 const modalBackdrop = document.getElementById("modal-backdrop");
 const manageBtn = document.getElementById("manage-children");
 const childrenList = document.getElementById("children-list");
@@ -435,7 +365,7 @@ const closeModalBtn = document.getElementById("close-modal");
 const cancelModalBtn = document.getElementById("cancel-modal");
 const onboardingNote = document.getElementById("onboarding-note");
 
-/* Redigera modal */
+/* Edit modal */
 const editBackdrop = document.getElementById("edit-backdrop");
 const editSubject = document.getElementById("edit-subject");
 const editTask = document.getElementById("edit-task");
@@ -446,400 +376,219 @@ const editCancel = document.getElementById("edit-cancel");
 const editSave = document.getElementById("edit-save");
 let editingId = null;
 
-/* ===== Init ===== */
-renderAll();
-ensureOnboarding();
-toggleTimesForExam();
-validateForm();
+/* Init */
+renderAll(); ensureOnboarding(); toggleTimesForExam(); validateForm();
 
-/* ===== Event listeners ===== */
+/* Events */
 addBtn.onclick = addHomework;
-
-addQuickBtn.onclick = () => {
-  if(!hasAnyChild()){ openModal(true); return; }
-  toggleInputRow();
-  validateForm();
-};
-
+addQuickBtn.onclick = () => { if(!hasAnyChild()){ openModal(true); return; } toggleInputRow(); validateForm(); };
 document.addEventListener("keydown", (e)=>{
   const anyModalOpen = (modalBackdrop.style.display === "flex") || (editBackdrop.style.display === "flex");
-  if(e.key === "Escape" && !anyModalOpen && !inputRow.hasAttribute("hidden")){
-    abortInput();
-  }
+  if(e.key === "Escape" && !anyModalOpen && !inputRow.hasAttribute("hidden")){ abortInput(); }
 });
-
 isExamInput.addEventListener("change", ()=>{ toggleTimesForExam(); validateForm(); });
 subjectSelect.addEventListener("change", validateForm);
 taskInput.addEventListener("input", validateForm);
 dueInput.addEventListener("change", validateForm);
 
-/* Edit modal interactions */
+/* Edit modal */
 editIsExam.addEventListener("change", toggleEditTimesForExam);
-editCancel.onclick = ()=>{ closeEditModal(); };
+editCancel.onclick = ()=> closeEditModal();
 editSave.onclick = saveEditChanges;
 
-/* Chip-klick: byt vy, nollställ datumfiltret och bygg alternativ */
+/* Filter chips */
 chips.forEach(c => c.onclick = () => {
   if(!hasAnyChild()){ openModal(true); return; }
   setActiveChip(c.dataset.filter);
-  state().filter = c.dataset.filter; // 'active' | 'done' | 'exam'
+  state().filter = c.dataset.filter;
   rebuildDateOptions();
   filterDate.value = "";
-  renderAll();
-  saveStore();
+  renderAll(); saveStore();
 });
-
-filterDate.onchange = ()=>{ renderList(); };
+filterDate.onchange = ()=> renderList();
 
 childSelect.onchange = () => {
   store.currentChild = childSelect.value;
-  if(!store.currentChild){ return; }
-  state().filter = "active";
-  state().focusedSubject = "";
-  setActiveChip("active");
-  rebuildDateOptions();
-  filterDate.value = "";
-  saveStore();
-  renderAll();
+  if(!store.currentChild) return;
+  state().filter = "active"; state().focusedSubject = "";
+  setActiveChip("active"); rebuildDateOptions(); filterDate.value = "";
+  saveStore(); renderAll();
 };
 
 manageBtn.onclick = ()=>openModal(false);
 closeModalBtn.onclick = ()=>{ if(hasAnyChild()) closeModal(); };
 cancelModalBtn.onclick = ()=>{
-  if(modalSnapshot){
-    store = modalSnapshot;
-    modalSnapshot = null;
-    saveStore();
-    renderAll();
-    showToast("Ändringar ångrade");
-  }
+  if(modalSnapshot){ store = modalSnapshot; modalSnapshot = null; saveStore(); renderAll(); showToast("Ändringar ångrade"); }
   modalBackdrop.style.display="none";
 };
 saveNewChildBtn.onclick = addNewChild;
 
-/* ===== Logic ===== */
+/* Helpers / State */
 function hasAnyChild(){ return store.children && Object.keys(store.children).length>0; }
 function ensureOnboarding(){ if(!hasAnyChild()) openModal(true); }
-
 function state(){
   const name = store.currentChild;
-  if(!name || !store.children || !store.children[name]){
-    return { subjects:[], todos:[], filter:"active", focusedSubject:"" };
-  }
-  const s = store.children[name];
-  if(!("filter" in s)) s.filter="active";
-  if(!("focusedSubject" in s)) s.focusedSubject="";
-  return s;
+  if(!name || !store.children || !store.children[name]) return { subjects:[], todos:[], filter:"active", focusedSubject:"" };
+  const s = store.children[name]; if(!("filter" in s)) s.filter="active"; if(!("focusedSubject" in s)) s.focusedSubject=""; return s;
 }
 
+/* Add / Edit / Remove */
 function addHomework(){
   if(!hasAnyChild()){ openModal(true); alert("Lägg till ett barn först."); return; }
-
   const s = state();
   const subj = subjectSelect.value;
   const task = taskInput.value.trim();
   const due  = dueInput.value;
   const isExam = !!isExamInput.checked;
-
-  if(!due){
-    alert(isExam ? "Ange datum för provet." : "Ange datum för läxan.");
-    dueInput.focus();
-    return;
-  }
-
+  if(!due){ alert(isExam ? "Ange datum för provet." : "Ange datum för läxan."); dueInput.focus(); return; }
   const times = isExam ? 1 : (parseInt(timesInput.value) || 1);
-
-  if(!s.subjects.includes(subj)){
-    alert("Ämnet är inte aktivt för detta barn. Lägg till ämnet under 'Hantera barn'.");
-    return;
-  }
+  if(!s.subjects.includes(subj)){ alert("Ämnet är inte aktivt för detta barn. Lägg till ämnet under 'Hantera barn'."); return; }
   if(!task) return;
 
   s.todos.push({ id:safeId(), subj, task, due, timesLeft:times, timesTotal:times, done:false, isExam, completedOn:null });
-  saveStore();
-  resetInputs();
-  toggleTimesForExam();
-  validateForm();
+  saveStore(); resetInputs(); toggleTimesForExam(); validateForm();
 
-  if(!inputRow.hasAttribute("hidden")){
-    inputRow.setAttribute("hidden", "");
-    addQuickBtn.setAttribute("aria-expanded","false");
-    addQuickBtn.textContent = "Lägg till läxa/prov";
-  }
-
-  renderAll();
-  showToast(isExam ? "Prov tillagt" : "Läxa tillagd");
+  if(!inputRow.hasAttribute("hidden")){ inputRow.setAttribute("hidden",""); addQuickBtn.setAttribute("aria-expanded","false"); addQuickBtn.textContent = "Lägg till läxa/prov"; }
+  renderAll(); showToast(isExam ? "Prov tillagt" : "Läxa tillagd");
 }
 
 function tick(id){
   const s = state();
-  const t = s.todos.find(x=>x.id===id);
-  if(!t) return;
-
+  const t = s.todos.find(x=>x.id===id); if(!t) return;
   if(t.isExam){ showToast("Prov försvinner automatiskt efter provdatum"); return; }
 
   if(t.timesLeft > 1){
-    t.timesLeft--;
-    saveStore(); renderAll();
+    t.timesLeft--; saveStore(); renderAll();
     const total = t.timesTotal || Math.max(1, t.timesLeft||1);
     const doneCount = Math.max(0, total - t.timesLeft);
     showToast(`Omgång avklarad (${doneCount}/${total} gjorda)`);
   } else {
-    t.timesLeft = 0;
-    t.done = true;
-    t.completedOn = todayLocalISO();
-    saveStore(); renderAll();
-    showToast("Läxa klar!");
+    t.timesLeft = 0; t.done = true; t.completedOn = todayLocalISO();
+    saveStore(); renderAll(); showToast("Läxa klar!");
   }
 }
-
-/* Checkbox tas bort – funktionen finns kvar om du vill återaktivera i framtiden */
-function onCheckboxChange(){}
+function onCheckboxChange(){} /* checkbox borttagen */
 
 function removeItem(id){
   const s = state();
-  const t = s.todos.find(x=>x.id===id);
-  if(!t) return;
-  const msg = t.isExam ? "Är du säker på att du vill radera detta prov?" :
-                         "Är du säker på att du vill radera denna läxa?";
+  const t = s.todos.find(x=>x.id===id); if(!t) return;
+  const msg = t.isExam ? "Är du säker på att du vill radera detta prov?" : "Är du säker på att du vill radera denna läxa?";
   if(!confirm(msg)) return;
-
   s.todos = s.todos.filter(x=>x.id!==id);
-  saveStore(); 
-  renderAll();
+  saveStore(); renderAll();
   showToast(t.isExam ? "Prov borttaget" : "Läxa borttagen");
 }
 
-/* ====== EDIT ====== */
+/* Edit modal */
 function openEditModal(id){
   const s = state();
-  const t = s.todos.find(x=>x.id===id);
-  if(!t) return;
+  const t = s.todos.find(x=>x.id===id); if(!t) return;
   editingId = id;
-
   editSubject.innerHTML = "";
-  s.subjects.forEach(sub=>{
-    const opt=document.createElement("option");
-    opt.value=sub; opt.textContent=sub;
-    editSubject.appendChild(opt);
-  });
-
-  editSubject.value = t.subj;
-  editTask.value = t.task;
-  editIsExam.checked = !!t.isExam;
-  editDue.value = t.due || "";
-  editTimes.value = t.timesTotal || Math.max(1, t.timesLeft || 1);
-
+  s.subjects.forEach(sub=>{ const opt=document.createElement("option"); opt.value=sub; opt.textContent=sub; editSubject.appendChild(opt); });
+  editSubject.value = t.subj; editTask.value = t.task; editIsExam.checked = !!t.isExam; editDue.value = t.due || ""; editTimes.value = t.timesTotal || Math.max(1, t.timesLeft || 1);
   toggleEditTimesForExam();
   editBackdrop.style.display="flex";
 }
-
 function toggleEditTimesForExam(){
   const isExam = !!editIsExam.checked;
-  if(isExam){
-    editTimes.value = "";
-    editTimes.placeholder = "–";
-    editTimes.disabled = true;
-  } else {
-    editTimes.disabled = false;
-    editTimes.placeholder = "";
-    if(!editTimes.value) editTimes.value = 1;
-  }
+  if(isExam){ editTimes.value = ""; editTimes.placeholder = "–"; editTimes.disabled = true; }
+  else { editTimes.disabled = false; editTimes.placeholder = ""; if(!editTimes.value) editTimes.value = 1; }
 }
-
-function closeEditModal(){
-  editingId = null;
-  editBackdrop.style.display="none";
-}
-
+function closeEditModal(){ editingId = null; editBackdrop.style.display="none"; }
 function saveEditChanges(){
   if(editingId==null) return;
   const s = state();
-  const t = s.todos.find(x=>x.id===editingId);
-  if(!t) return;
-
+  const t = s.todos.find(x=>x.id===editingId); if(!t) return;
   const newSubj = editSubject.value;
   const newTask = editTask.value.trim();
   const newIsExam = !!editIsExam.checked;
   const newDue  = editDue.value;
-
-  if(!newDue){
-    alert(newIsExam ? "Ange datum för provet." : "Ange datum för läxan.");
-    return;
-  }
+  if(!newDue){ alert(newIsExam ? "Ange datum för provet." : "Ange datum för läxan."); return; }
   if(!newTask){ alert("Beskriv läxan."); return; }
-  if(!s.subjects.includes(newSubj)){
-    alert("Ämnet är inte aktivt för detta barn.");
-    return;
-  }
+  if(!s.subjects.includes(newSubj)){ alert("Ämnet är inte aktivt för detta barn."); return; }
 
-  if(newIsExam){
-    t.timesTotal = 1;
-    t.timesLeft  = t.done ? 0 : 1;
-  } else {
+  if(newIsExam){ t.timesTotal = 1; t.timesLeft  = t.done ? 0 : 1; }
+  else {
     const oldTotal = t.timesTotal || Math.max(1, t.timesLeft || 1);
     const oldDoneCount = Math.max(0, oldTotal - (t.timesLeft ?? oldTotal));
     const newTotal = Math.max(1, parseInt(editTimes.value || "1"));
     let newLeft = Math.max(0, newTotal - oldDoneCount);
-
     if(t.done && newLeft>0){ t.done=false; t.completedOn=null; }
     if(!t.done && newLeft===0){ t.done=true; t.completedOn = t.completedOn || todayLocalISO(); }
-
-    t.timesTotal = newTotal;
-    t.timesLeft  = newLeft;
+    t.timesTotal = newTotal; t.timesLeft  = newLeft;
   }
 
-  t.subj = newSubj;
-  t.task = newTask;
-  t.isExam = newIsExam;
-  t.due = newDue;
-
-  saveStore();
-  closeEditModal();
-  renderAll();
-  showToast("Uppgift uppdaterad");
+  t.subj = newSubj; t.task = newTask; t.isExam = newIsExam; t.due = newDue;
+  saveStore(); closeEditModal(); renderAll(); showToast("Uppgift uppdaterad");
 }
 
-/* ===== Autoklarmarkera prov efter datum ===== */
+/* Exams auto-finalize */
 function finalizeExamsByDate(){
-  const s = state();
-  if(!s.todos) return;
-  const today = todayLocalISO();
-  let changed=false;
+  const s = state(); if(!s.todos) return;
+  const today = todayLocalISO(); let changed=false;
   s.todos.forEach(t=>{
-    if(t.isExam && t.due && t.due < today && !t.done){
-      t.done = true;
-      t.completedOn = t.due;
-      changed = true;
-    }
+    if(t.isExam && t.due && t.due < today && !t.done){ t.done = true; t.completedOn = t.due; changed=true; }
   });
   if(changed) saveStore();
 }
 
-/* ===== Rendering ===== */
-function renderAll(){
-  finalizeExamsByDate();
-  renderChildSelect();
-  renderSubjectOptions();
-  renderSummary();
-  rebuildDateOptions();
-  renderTotals();
-  renderList();
-}
-
+/* Render */
+function renderAll(){ finalizeExamsByDate(); renderChildSelect(); renderSubjectOptions(); renderSummary(); rebuildDateOptions(); renderTotals(); renderList(); }
 function renderChildSelect(){
   childSelect.innerHTML = "";
   if(!hasAnyChild()){ childSelect.value=""; return; }
-  Object.keys(store.children).sort().forEach(name=>{
-    const opt = document.createElement("option");
-    opt.value = name; opt.textContent = name;
-    childSelect.appendChild(opt);
-  });
+  Object.keys(store.children).sort().forEach(name=>{ const opt=document.createElement("option"); opt.value = name; opt.textContent = name; childSelect.appendChild(opt); });
   if(!store.currentChild) store.currentChild = Object.keys(store.children)[0] || "";
   childSelect.value = store.currentChild || "";
 }
-
 function renderSubjectOptions(){
-  const s = state();
-  subjectSelect.innerHTML = "";
-  if(s.subjects.length===0){
-    const opt=document.createElement("option");
-    opt.value=""; opt.textContent="(Lägg till barn & ämnen via 'Hantera barn')";
-    subjectSelect.appendChild(opt);
-  } else {
-    ALL_SUBJECTS.filter(sub=>s.subjects.includes(sub)).forEach(sub=>{
-      const opt=document.createElement("option");
-      opt.value=sub; opt.textContent=sub;
-      subjectSelect.appendChild(opt);
-    });
-  }
+  const s = state(); subjectSelect.innerHTML = "";
+  if(s.subjects.length===0){ const opt=document.createElement("option"); opt.value=""; opt.textContent="(Lägg till barn & ämnen via 'Hantera barn')"; subjectSelect.appendChild(opt); }
+  else { ALL_SUBJECTS.filter(sub=>s.subjects.includes(sub)).forEach(sub=>{ const opt=document.createElement("option"); opt.value=sub; opt.textContent=sub; subjectSelect.appendChild(opt); }); }
 }
-
-function setActiveChip(filter){
-  chips.forEach(x=>x.classList.remove("active"));
-  const target = chips.find(x=>x.dataset.filter===filter);
-  if(target) target.classList.add("active");
-}
+function setActiveChip(filter){ chips.forEach(x=>x.classList.remove("active")); const target=chips.find(x=>x.dataset.filter===filter); if(target) target.classList.add("active"); }
 
 function renderSummary(){
-  const s = state();
-  const focused = s.focusedSubject || "";
-  const totalKvar = s.todos.filter(t=>!t.done).length;
-
+  const s = state(); const focused = s.focusedSubject || ""; const totalKvar = s.todos.filter(t=>!t.done).length;
   subjectSummary.innerHTML = "";
 
   const totalCard = document.createElement("div");
   totalCard.className = "card total-card";
   totalCard.title = "Visa aktiva läxor (alla ämnen)";
-  totalCard.setAttribute("role","button");
-  totalCard.setAttribute("tabindex","0");
-  totalCard.innerHTML = `
-    <div class="title">📊 Totalt</div>
-    <div class="kpi"><span class="pill ${focused===""?"active-pill":""}">Kvar: ${totalKvar}</span></div>
-  `;
+  totalCard.setAttribute("role","button"); totalCard.setAttribute("tabindex","0");
+  totalCard.innerHTML = `<div class="title">📊 Totalt</div><div class="kpi"><span class="pill ${focused===""?"active-pill":""}">Kvar: ${totalKvar}</span></div>`;
   if (focused==="") totalCard.classList.add("selected");
-
-  const clearToActive = ()=>{
-    s.filter = "active";
-    s.focusedSubject = "";
-    setActiveChip("active");
-    filterDate.value = "";
-    rebuildDateOptions();
-    renderAll();
-  };
+  const clearToActive = ()=>{ s.filter = "active"; s.focusedSubject = ""; setActiveChip("active"); filterDate.value = ""; rebuildDateOptions(); renderAll(); };
   totalCard.onclick = clearToActive;
   totalCard.onkeydown = (e)=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); clearToActive(); } };
   subjectSummary.appendChild(totalCard);
 
   ALL_SUBJECTS.filter(sub=>s.subjects.includes(sub)).forEach(sub=>{
     const kvar  = s.todos.filter(t=>t.subj===sub && !t.done).length;
-
     const card=document.createElement("div");
-    card.className="card";
-    card.title=`Visa aktiva i ${sub}`;
-    card.setAttribute("role","button");
-    card.setAttribute("tabindex","0");
-
-    const title=document.createElement("div");
-    title.className="title";
-    title.textContent=`${subjectIcons[sub]||"📘"} ${sub}`;
-
-    const kpi=document.createElement("div");
-    kpi.className="kpi";
+    card.className="card"; card.title=`Visa aktiva i ${sub}`; card.setAttribute("role","button"); card.setAttribute("tabindex","0");
     const isSelected = (focused===sub);
+    card.innerHTML = `
+      <div class="title">${subjectIcons[sub]||"📘"} ${sub}</div>
+      <div class="kpi"><span class="pill ${isSelected?"active-pill":""}">Kvar: ${kvar}</span></div>
+    `;
     if (isSelected) card.classList.add("selected");
-    kpi.innerHTML = `<span class="pill ${isSelected?"active-pill":""}">Kvar: ${kvar}</span>`;
-
-    card.appendChild(title); 
-    card.appendChild(kpi);
-
-    const setFilterSubject = ()=>{
-      s.filter = "active";
-      s.focusedSubject = sub;
-      setActiveChip("active");
-      filterDate.value = "";
-      rebuildDateOptions();
-      renderAll();
-    };
+    const setFilterSubject = ()=>{ s.filter="active"; s.focusedSubject=sub; setActiveChip("active"); filterDate.value=""; rebuildDateOptions(); renderAll(); };
     card.onclick=setFilterSubject;
     card.onkeydown=(e)=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); setFilterSubject(); } };
-
     subjectSummary.appendChild(card);
   });
 }
 
 function renderTotals(){
-  const s = state();
-  const total = s.todos.length;
-  const active = s.todos.filter(t=>!t.done).length;
-  const done = total - active;
+  const s = state(); const total = s.todos.length; const active = s.todos.filter(t=>!t.done).length; const done = total - active;
   totalsEl.textContent = `Totalt ${total} ${plural(total,"läxa","läxor")} • Aktiva ${active} • Klara ${done}`;
 }
 
 function renderList(){
   const s = state();
   listEl.innerHTML = "";
-
   const viewFilter = s.filter || "active";
   const subjFocus = s.focusedSubject || "";
   const dateKey = filterDate.value || "";
@@ -857,40 +606,20 @@ function renderList(){
   });
 
   if((s.filter||"active")==="done"){
-    items.sort((a,b)=>{
-      const ad = a.completedOn || a.due || "";
-      const bd = b.completedOn || b.due || "";
-      return bd.localeCompare(ad);
-    });
+    items.sort((a,b)=>{ const ad = a.completedOn || a.due || ""; const bd = b.completedOn || b.due || ""; return bd.localeCompare(ad); });
   } else {
-    const rank = (t) => {
-      if (!t.due) return 3;
-      if (!t.done && t.due < todayISO) return 0;
-      if (!t.done && t.due === todayISO) return 1;
-      return 2;
-    };
-    items.sort((a,b) => {
-      const ra = rank(a), rb = rank(b);
-      if (ra !== rb) return ra - rb;
-      if (a.due && b.due) return a.due.localeCompare(b.due);
-      return 0;
-    });
+    const rank = (t) => { if (!t.due) return 3; if (!t.done && t.due < todayISO) return 0; if (!t.done && t.due === todayISO) return 1; return 2; };
+    items.sort((a,b) => { const ra = rank(a), rb = rank(b); if (ra !== rb) return ra - rb; if (a.due && b.due) return a.due.localeCompare(b.due); return 0; });
   }
 
   items.forEach(t=>{
     const li=document.createElement("li");
-
-    if(!t.done && t.due){
-      if(t.due < todayISO) li.classList.add("overdue");
-      else if(t.due === todayISO) li.classList.add("today");
-    }
+    if(!t.done && t.due){ if(t.due < todayISO) li.classList.add("overdue"); else if(t.due === todayISO) li.classList.add("today"); }
     if(t.done) li.classList.add("done");
     if(t.isExam) li.classList.add("exam");
 
-    /* (1) Ghost-cell i stället för checkbox-kolumn */
-    const ghost1 = document.createElement("div");
-    ghost1.className="ghost-cell";
-    li.appendChild(ghost1);
+    /* (1) Ghost i st f checkbox-kolumn */
+    const ghost1 = document.createElement("div"); ghost1.className="ghost-cell"; li.appendChild(ghost1);
 
     /* (2) Progress / ghost */
     if(!t.isExam && (t.timesTotal||1) > 1){
@@ -898,7 +627,7 @@ function renderList(){
       const total = t.timesTotal || Math.max(1, t.timesLeft||1);
       const doneCount = Math.max(0, total - (t.timesLeft ?? total));
       prog.className="progress-badge";
-      prog.textContent = isNarrow ? `${doneCount}/${total}` : `${doneCount}/${total} gjorda`; // JS-puts
+      prog.textContent = isNarrow ? `${doneCount}/${total}` : `${doneCount}/${total} gjorda`;
       li.appendChild(prog);
     } else {
       const ghost2 = document.createElement("div"); ghost2.className="ghost-cell"; li.appendChild(ghost2);
@@ -908,35 +637,23 @@ function renderList(){
     const textWrap=document.createElement("div");
     const text=document.createElement("div"); text.className="text";
     text.textContent=`${subjectIcons[t.subj]||"📘"} ${t.subj}: ${t.task}`;
-
     const meta=document.createElement("div"); meta.className="meta-line";
     const dateNice = t.due ? formatDate(t.due) : "";
     const dueLabel = computeDueLabel(t, todayISO, dateNice);
     const dueClass  = computeDueClass(t, todayISO);
     meta.innerHTML = dueLabel ? `<span class="due-badge ${dueClass}">${dueLabel}</span>` : "";
-   
-    }
-    if(t.done && t.completedOn){
-      meta.innerHTML += ` • Klar: ${formatDate(t.completedOn)}`;
-    }
-    textWrap.appendChild(text);
-    textWrap.appendChild(meta);
+    /* OBS: "Gång kvar: X" borttagen enligt önskemål */
+    if(t.done && t.completedOn){ meta.innerHTML += ` • Klar: ${formatDate(t.completedOn)}`; }
+    textWrap.appendChild(text); textWrap.appendChild(meta);
     li.appendChild(textWrap);
 
     /* (4) Exam-badge */
     const examWrap = document.createElement("div");
-    if(t.isExam){
-      const examB = document.createElement("span");
-      examB.className = "exam-badge";
-      examB.textContent = "PROV";
-      examWrap.appendChild(examB);
-    }
+    if(t.isExam){ const examB = document.createElement("span"); examB.className = "exam-badge"; examB.textContent = "PROV"; examWrap.appendChild(examB); }
     li.appendChild(examWrap);
 
-    /* (5) Knappar: ✔️ (endast läxa) • ⚙️ • 🗑️ */
-    const btns=document.createElement("div");
-    btns.className="buttons-col";
-
+    /* (5) Knappar */
+    const btns=document.createElement("div"); btns.className="buttons-col";
     if(!t.isExam){
       const tickBtn=document.createElement("button"); 
       tickBtn.textContent="✔️"; 
@@ -945,90 +662,41 @@ function renderList(){
       tickBtn.onclick=()=>tick(t.id);
       btns.appendChild(tickBtn);
     }
-
-    const editBtn=document.createElement("button");
-    editBtn.textContent="⚙️";
-    editBtn.className="icon-btn";
-    editBtn.title="Redigera";
-    editBtn.onclick=()=>openEditModal(t.id);
-    btns.appendChild(editBtn);
-
-    const delBtn=document.createElement("button"); 
-    delBtn.textContent="🗑️"; 
-    delBtn.className="icon-btn danger"; 
-    delBtn.title=t.isExam?"Radera prov":"Radera läxa";
-    delBtn.onclick=()=>removeItem(t.id);
-    btns.appendChild(delBtn);
-
+    const editBtn=document.createElement("button"); editBtn.textContent="⚙️"; editBtn.className="icon-btn"; editBtn.title="Redigera"; editBtn.onclick=()=>openEditModal(t.id); btns.appendChild(editBtn);
+    const delBtn=document.createElement("button"); delBtn.textContent="🗑️"; delBtn.className="icon-btn danger"; delBtn.title=t.isExam?"Radera prov":"Radera läxa"; delBtn.onclick=()=>removeItem(t.id); btns.appendChild(delBtn);
     li.appendChild(btns);
+
     listEl.appendChild(li);
   });
 }
 
-/* ===== Datum-filter ===== */
+/* Datumfilter */
 function rebuildDateOptions(){
   const view = state().filter || "active";
   filterDate.innerHTML = "";
   filterDate.appendChild(new Option("Alla datum",""));
-
-  if(view === "done"){
-    filterDate.appendChild(new Option("<2 veckor","lt2w"));
-    filterDate.appendChild(new Option("<1 månad","lt1m"));
-  } else {
-    filterDate.appendChild(new Option("<1 vecka","lt1w"));
-    filterDate.appendChild(new Option("<2 veckor","lt2w"));
-  }
+  if(view === "done"){ filterDate.appendChild(new Option("<2 veckor","lt2w")); filterDate.appendChild(new Option("<1 månad","lt1m")); }
+  else { filterDate.appendChild(new Option("<1 vecka","lt1w")); filterDate.appendChild(new Option("<2 veckor","lt2w")); }
 }
 
-/* ===== Datumhjälp ===== */
-function todayLocalISO(){
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth()+1).padStart(2,'0');
-  const dd = String(d.getDate()).padStart(2,'0');
-  return `${y}-${m}-${dd}`;
-}
+/* Date utils */
+function todayLocalISO(){ const d = new Date(); const y=d.getFullYear(); const m=String(d.getMonth()+1).padStart(2,'0'); const dd=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${dd}`; }
 function isoToDate(iso){ return new Date(iso+"T00:00:00"); }
-
 const MS_DAY = 24*60*60*1000;
-function daysDiff(a, b){
-  const a0 = new Date(a.getFullYear(), a.getMonth(), a.getDate());
-  const b0 = new Date(b.getFullYear(), b.getMonth(), b.getDate());
-  return Math.floor((a0.getTime() - b0.getTime())/MS_DAY);
-}
-
+function daysDiff(a,b){ const a0=new Date(a.getFullYear(),a.getMonth(),a.getDate()); const b0=new Date(b.getFullYear(),b.getMonth(),b.getDate()); return Math.floor((a0-b0)/MS_DAY); }
 function matchesDateWindow(t, viewFilter, key, today){
   if(key==="") return true;
   const due  = t.due ? isoToDate(t.due) : null;
   const comp = t.completedOn ? isoToDate(t.completedOn) : null;
-
   switch(key){
-    case "lt1w": {
-      if(viewFilter==="done") return true;
-      if(!due) return false;
-      const d = daysDiff(due, today);
-      return d >= 0 && d <= 7;
-    }
+    case "lt1w": { if(viewFilter==="done") return true; if(!due) return false; const d = daysDiff(due, today); return d >= 0 && d <= 7; }
     case "lt2w": {
-      if(viewFilter==="done"){
-        if(!comp) return false;
-        const d = daysDiff(today, comp);
-        return d >= 0 && d <= 14;
-      } else {
-        if(!due) return false;
-        const d = daysDiff(due, today);
-        return d >= 0 && d <= 14;
-      }
+      if(viewFilter==="done"){ if(!comp) return false; const d = daysDiff(today, comp); return d >= 0 && d <= 14; }
+      else { if(!due) return false; const d = daysDiff(due, today); return d >= 0 && d <= 14; }
     }
-    case "lt1m": {
-      if(viewFilter!=="done" || !comp) return false;
-      const d = daysDiff(today, comp);
-      return d >= 0 && d <= 30;
-    }
-  }
-  return true;
+    case "lt1m": { if(viewFilter!=="done" || !comp) return false; const d = daysDiff(today, comp); return d >= 0 && d <= 30; }
+  } return true;
 }
-
 function computeDueLabel(t, todayISO, dateNice){
   if(!t.due) return "Ingen deadline";
   if(t.isExam && t.due < todayISO) return `Provdatum: ${dateNice}`;
@@ -1044,247 +712,86 @@ function computeDueClass(t, todayISO){
   return "";
 }
 
-/* ===== Modal Hantera Barn ===== */
+/* Modal Hantera barn */
 function openModal(isOnboarding=false){
   try { modalSnapshot = JSON.parse(JSON.stringify(store)); } catch { modalSnapshot = null; }
-
   renderChildrenEditor();
   onboardingNote.style.display = (isOnboarding || !hasAnyChild()) ? "block" : "none";
-
-  newChildName.value="";
-  newChildSubjects.innerHTML="";
-  buildSubjectsRows(newChildSubjects); // chips (allt ovalt som default)
-
-  const lock = !hasAnyChild();
-  closeModalBtn.disabled = lock;
-  cancelModalBtn.disabled = lock;
-
+  newChildName.value=""; newChildSubjects.innerHTML=""; buildSubjectsRows(newChildSubjects);
+  const lock = !hasAnyChild(); closeModalBtn.disabled = lock; cancelModalBtn.disabled = lock;
   modalBackdrop.style.display="flex";
 }
-
 function closeModal(){
-  if(!hasAnyChild()){ return; }
-
-  const selections = {};
-  Object.keys(store.children).forEach(n=> selections[n]=[]);
-  const activeChips = Array.from(document.querySelectorAll('#children-list .sub-chip.active[data-child]'));
-  activeChips.forEach(btn=>{
-    const nm = btn.dataset.child;
-    (selections[nm] ||= []).push(btn.dataset.sub);
-  });
-
-  Object.entries(selections).forEach(([childName, subjects])=>{
-    if (store.children[childName]) store.children[childName].subjects = subjects;
-  });
-
-  saveStore();
-  renderAll();
-  showToast("Ämnen sparade");
-
-  modalSnapshot = null;
-  modalBackdrop.style.display="none";
-}
-
-function renderChildrenEditor(){
-  childrenList.innerHTML="";
   if(!hasAnyChild()) return;
+  const selections = {}; Object.keys(store.children).forEach(n=> selections[n]=[]);
+  const activeChips = Array.from(document.querySelectorAll('#children-list .sub-chip.active[data-child]'));
+  activeChips.forEach(btn=>{ const nm = btn.dataset.child; (selections[nm] ||= []).push(btn.dataset.sub); });
+  Object.entries(selections).forEach(([childName, subjects])=>{ if (store.children[childName]) store.children[childName].subjects = subjects; });
+  saveStore(); renderAll(); showToast("Ämnen sparade");
+  modalSnapshot = null; modalBackdrop.style.display="none";
+}
+function renderChildrenEditor(){
+  childrenList.innerHTML=""; if(!hasAnyChild()) return;
   Object.entries(store.children).forEach(([name, obj])=>{
     const wrap=document.createElement("div"); wrap.className="child-row";
-
-    const nameEl=document.createElement("div");
-    nameEl.style.minWidth="140px";
-    nameEl.innerHTML=`<strong>${name}</strong>`;
-
-    const coll=document.createElement("div"); coll.className="subjects-collection";
-    buildSubjectsRows(coll, obj.subjects, name);
-
-    const actions=document.createElement("div");
-    actions.style.display="flex"; actions.style.gap="8px"; actions.style.alignItems="center";
-
-    const delBtn=document.createElement("button");
-    delBtn.className="ghost danger-text";
-    delBtn.textContent="Ta bort barn";
-    delBtn.title="Tar bort barnet och alla dess läxor";
-    delBtn.onclick=()=>deleteChild(name);
-
+    const nameEl=document.createElement("div"); nameEl.style.minWidth="140px"; nameEl.innerHTML=`<strong>${name}</strong>`;
+    const coll=document.createElement("div"); coll.className="subjects-collection"; buildSubjectsRows(coll, obj.subjects, name);
+    const actions=document.createElement("div"); actions.style.display="flex"; actions.style.gap="8px"; actions.style.alignItems="center";
+    const delBtn=document.createElement("button"); delBtn.className="ghost danger-text"; delBtn.textContent="Ta bort barn"; delBtn.title="Tar bort barnet och alla dess läxor"; delBtn.onclick=()=>deleteChild(name);
     actions.appendChild(delBtn);
-
-    wrap.appendChild(nameEl); 
-    wrap.appendChild(coll); 
-    wrap.appendChild(actions);
-    childrenList.appendChild(wrap);
+    wrap.appendChild(nameEl); wrap.appendChild(coll); wrap.appendChild(actions); childrenList.appendChild(wrap);
   });
 }
-
-/* Bygg grupper: varje grupp = rubrik + 1 rad chips (små toggle-knappar) */
 function buildSubjectsRows(container, preselected=[], childName=null){
   SUBJECT_GROUPS.forEach(group=>{
     const gwrap=document.createElement("div"); gwrap.className="subjects-group";
-
-    const header=document.createElement("div");
-    header.className="group-header";
-    header.textContent = group.title;
-
-    const row=document.createElement("div");
-    row.className="subject-row";
-
+    const header=document.createElement("div"); header.className="group-header"; header.textContent = group.title;
+    const row=document.createElement("div"); row.className="subject-row";
     group.items.forEach(sub=>{
-      const btn=document.createElement("button");
-      btn.type="button";
-      btn.className="sub-chip";
-      btn.dataset.sub = sub;
-      if(childName) btn.dataset.child = childName;
-      const selected = !!(preselected && preselected.includes(sub));
-      if(selected) btn.classList.add("active");
+      const btn=document.createElement("button"); btn.type="button"; btn.className="sub-chip"; btn.dataset.sub = sub; if(childName) btn.dataset.child = childName;
+      const selected = !!(preselected && preselected.includes(sub)); if(selected) btn.classList.add("active");
       btn.setAttribute("aria-pressed", selected ? "true" : "false");
       btn.textContent = `${subjectIcons[sub]||"📘"} ${sub}`;
-      btn.onclick = ()=>{
-        const newState = !btn.classList.contains("active");
-        btn.classList.toggle("active", newState);
-        btn.setAttribute("aria-pressed", newState ? "true" : "false");
-      };
+      btn.onclick = ()=>{ const ns = !btn.classList.contains("active"); btn.classList.toggle("active", ns); btn.setAttribute("aria-pressed", ns ? "true" : "false"); };
       row.appendChild(btn);
     });
-
-    gwrap.appendChild(header);
-    gwrap.appendChild(row);
-    container.appendChild(gwrap);
+    gwrap.appendChild(header); gwrap.appendChild(row); container.appendChild(gwrap);
   });
 }
-
 function addNewChild(){
-  const name = newChildName.value.trim();
-  if(!name){ alert("Ange ett namn."); return; }
+  const name = newChildName.value.trim(); if(!name){ alert("Ange ett namn."); return; }
   if(store.children && store.children[name]){ alert("Det finns redan ett barn med det namnet."); return; }
-
   const subjects = Array.from(newChildSubjects.querySelectorAll('.sub-chip.active')).map(b=>b.dataset.sub);
   if(!store.children) store.children = {};
   store.children[name] = { subjects, todos:[], filter:"active", focusedSubject:"" };
-
-  store.currentChild = name;
-  saveStore();
-  renderAll();
-  renderChildrenEditor();
-
-  closeModalBtn.disabled = false;
-  cancelModalBtn.disabled = false;
-
-  showToast(`Lade till ${name}`);
-
-  newChildName.value = "";
-  newChildSubjects.innerHTML = "";
-  buildSubjectsRows(newChildSubjects);
+  store.currentChild = name; saveStore(); renderAll(); renderChildrenEditor();
+  closeModalBtn.disabled = false; cancelModalBtn.disabled = false; showToast(`Lade till ${name}`);
+  newChildName.value = ""; newChildSubjects.innerHTML = ""; buildSubjectsRows(newChildSubjects);
 }
-
 function deleteChild(name){
   if(!confirm(`Vill du ta bort ${name}? Detta tar bort alla läxor för barnet.`)) return;
   if(store.children) delete store.children[name];
   const names = store.children ? Object.keys(store.children) : [];
-  if(names.length===0){
-    store.currentChild = "";
-    if (modalBackdrop.style.display === "flex"){
-      closeModalBtn.disabled = true;
-      cancelModalBtn.disabled = true;
-    }
-  } else {
-    store.currentChild = names[0];
-  }
-  saveStore();
-  renderAll(); renderChildrenEditor();
+  store.currentChild = names.length? names[0] : "";
+  if(names.length===0 && modalBackdrop.style.display==="flex"){ closeModalBtn.disabled = true; cancelModalBtn.disabled = true; }
+  saveStore(); renderAll(); renderChildrenEditor();
 }
 
-/* ===== Helpers ===== */
-function toggleInputRow(){
-  const isHidden = inputRow.hasAttribute("hidden");
-  if(isHidden){
-    inputRow.removeAttribute("hidden");
-    addQuickBtn.setAttribute("aria-expanded","true");
-    addQuickBtn.textContent = "Stäng";
-    setTimeout(()=> taskInput.focus(), 0);
-  } else {
-    abortInput();
-  }
-}
-function abortInput(){
-  resetInputs();
-  toggleTimesForExam();
-  validateForm();
-  inputRow.setAttribute("hidden", "");
-  addQuickBtn.setAttribute("aria-expanded","false");
-  addQuickBtn.textContent = "Lägg till läxa/prov";
-}
-
-function toggleTimesForExam(){
-  const isExam = !!isExamInput.checked;
-  if(isExam){
-    timesInput.value = "";
-    timesInput.placeholder = "–";
-    timesInput.disabled = true;
-  } else {
-    timesInput.disabled = false;
-    timesInput.placeholder = "";
-    if(!timesInput.value) timesInput.value = 1;
-  }
-}
-
-function validateForm(){
-  const subjOk = !!subjectSelect.value;
-  const taskOk = taskInput.value.trim().length > 0;
-  const dueOk  = !!dueInput.value;
-  const ok = subjOk && taskOk && dueOk;
-  addBtn.disabled = !ok;
-  addBtn.setAttribute("aria-disabled", String(!ok));
-}
-
-function migrateStore(){
-  try{
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if(!raw) return;
-    const parsed = JSON.parse(raw);
-    if(!parsed.children) return;
-    Object.values(parsed.children).forEach(c=>{
-      (c.todos||[]).forEach(t=>{
-        if(typeof t.timesTotal!=="number" || t.timesTotal<1){
-          t.timesTotal = Math.max(1, t.timesLeft || 1);
-        }
-        if(t.timesLeft>t.timesTotal){ t.timesLeft = t.timesTotal; }
-        if(t.isExam && t.due && t.done && !t.completedOn){
-          t.completedOn = t.due;
-        }
-        if(t.done && !t.completedOn){
-          t.completedOn = null;
-        }
-      });
-    });
-    store = parsed;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
-  }catch{}
-}
+/* Misc utils */
+function toggleInputRow(){ const isHidden = inputRow.hasAttribute("hidden"); if(isHidden){ inputRow.removeAttribute("hidden"); addQuickBtn.setAttribute("aria-expanded","true"); addQuickBtn.textContent = "Stäng"; setTimeout(()=> taskInput.focus(), 0); } else { abortInput(); } }
+function abortInput(){ resetInputs(); toggleTimesForExam(); validateForm(); inputRow.setAttribute("hidden",""); addQuickBtn.setAttribute("aria-expanded","false"); addQuickBtn.textContent = "Lägg till läxa/prov"; }
+function toggleTimesForExam(){ const isExam = !!isExamInput.checked; if(isExam){ timesInput.value = ""; timesInput.placeholder = "–"; timesInput.disabled = true; } else { timesInput.disabled = false; timesInput.placeholder = ""; if(!timesInput.value) timesInput.value = 1; } }
+function validateForm(){ const ok = !!subjectSelect.value && taskInput.value.trim().length>0 && !!dueInput.value; addBtn.disabled = !ok; addBtn.setAttribute("aria-disabled", String(!ok)); }
+function migrateStore(){ try{ const raw=localStorage.getItem(STORAGE_KEY); if(!raw) return; const parsed=JSON.parse(raw); if(!parsed.children) return; Object.values(parsed.children).forEach(c=>{ (c.todos||[]).forEach(t=>{ if(typeof t.timesTotal!=="number" || t.timesTotal<1){ t.timesTotal = Math.max(1, t.timesLeft || 1); } if(t.timesLeft>t.timesTotal){ t.timesLeft = t.timesTotal; } if(t.isExam && t.due && t.done && !t.completedOn){ t.completedOn = t.due; } if(t.done && !t.completedOn){ t.completedOn = null; } }); }); store = parsed; localStorage.setItem(STORAGE_KEY, JSON.stringify(store)); }catch{} }
 function saveStore(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(store)); }
-function loadStore(){
-  try{
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if(!raw) return { currentChild:"", children:{} };
-    const parsed = JSON.parse(raw);
-    if(!parsed.children) parsed.children = {};
-    return parsed;
-  }catch{ return { currentChild:"", children:{} }; }
-}
+function loadStore(){ try{ const raw=localStorage.getItem(STORAGE_KEY); if(!raw) return { currentChild:"", children:{} }; const parsed=JSON.parse(raw); if(!parsed.children) parsed.children={}; return parsed; }catch{ return { currentChild:"", children:{} }; } }
 function safeId(){ return "id-"+Math.random().toString(36).slice(2,10); }
 function resetInputs(){ taskInput.value=""; dueInput.value=""; timesInput.value=1; isExamInput.checked=false; }
 function formatDate(d){ try{ const [y,m,dd]=d.split("-"); return `${dd}/${m}/${y}`; } catch { return d; } }
 function plural(n, one, many){ return n===1 ? one : many; }
-let _toastTimer;
-function showToast(msg, ms=1800){
-  const el = document.getElementById('toast');
-  if(!el) return;
-  el.textContent = msg;
-  el.classList.add('show');
-  clearTimeout(_toastTimer);
-  _toastTimer = setTimeout(()=> el.classList.remove('show'), ms);
-}
+let _toastTimer; function showToast(msg, ms=1800){ const el=document.getElementById('toast'); if(!el) return; el.textContent=msg; el.classList.add('show'); clearTimeout(_toastTimer); _toastTimer=setTimeout(()=> el.classList.remove('show'), ms); }
 
-/* ===== PWA: registrera service worker ===== */
+/* PWA */
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js').catch(console.error);
