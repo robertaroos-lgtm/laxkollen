@@ -604,7 +604,12 @@ function renderList(){
     // Högerkolumn: endast Redigera + (ev) EXAM-badge
     const right=document.createElement("div"); right.style.display="flex"; right.style.flexDirection="column"; right.style.alignItems="flex-end"; right.style.gap="6px";
     if(t.isExam){ const examB=document.createElement("span"); examB.className="exam-badge"; examB.textContent="PROV"; right.appendChild(examB); }
-    const editBtn=document.createElement("button"); editBtn.textContent="⚙️"; editBtn.className="icon-btn"; editBtn.title="Redigera"; editBtn.onclick=()=>openEditModal(t.id); right.appendChild(editBtn);
+    const editBtn=document.createElement("button"); editBtn.textContent="⚙️"; editBtn.className="icon-btn"; editBtn.title="Redigera"; 
+    // Hindra att tap/click på knappen blir tolkad som swipe-start
+    editBtn.addEventListener('touchstart', e=>e.stopPropagation(), {passive:true});
+    editBtn.addEventListener('mousedown', e=>e.stopPropagation());
+    editBtn.onclick=()=>openEditModal(t.id); 
+    right.appendChild(editBtn);
 
     card.appendChild(left); card.appendChild(right);
     // Ikoner för swipe-feedback
@@ -626,8 +631,16 @@ function renderList(){
 function rebuildDateOptions(){
   const view = state().filter || "active";
   filterDate.innerHTML = "";
-  filterDate.appendChild(new Option("Alla datum",""));
-  if(view === "done"){ filterDate.appendChild(new Option("<2 veckor","lt2w")); filterDate.appendChild(new Option("<1 månad","lt1m")); }
+  // "Alla datum" borttagen enligt iPhone-önskemål
+  if(view === "done"){ 
+    filterDate.appendChild(new Option("<2 veckor","lt2w")); 
+    filterDate.appendChild(new Option("<1 månad","lt1m")); 
+  }
+  else { 
+    filterDate.appendChild(new Option("<1 vecka","lt1w")); 
+    filterDate.appendChild(new Option("<2 veckor","lt2w")); 
+  }
+}
   else { filterDate.appendChild(new Option("<1 vecka","lt1w")); filterDate.appendChild(new Option("<2 veckor","lt2w")); }
 }
 
@@ -758,8 +771,23 @@ function haptic(type='light'){
 function attachSwipe(li, onRight, onLeft){
   const card = li.querySelector('.li-card');
   const THRESHOLD = 72; // px för att trigga
-  let startX = 0, currentX = 0, dragging = false;
-  const start = (x)=>{ dragging=true; startX=x; card.style.transition='none'; li.classList.remove('swipe-left','swipe-right'); };
+  let startX = 0, currentX = 0, dragging = false, startedOnInteractive = false;
+  const isInteractive = (el)=> !!el && el.closest && el.closest('button, a, input, select, textarea, [role="button"]');
+  const start = (x, evt)=>{ 
+    startedOnInteractive = isInteractive(evt?.target);
+    if(startedOnInteractive) return; // låt knappar fungera
+    dragging=true; startX=x; card.style.transition='none'; li.classList.remove('swipe-left','swipe-right');
+  };
+  const move  = (x)=>{ if(!dragging) return; currentX = x - startX; card.style.transform = `translateX(${currentX}px)`; if(currentX>0){ li.classList.add('swipe-right'); li.classList.remove('swipe-left'); } else if(currentX<0){ li.classList.add('swipe-left'); li.classList.remove('swipe-right'); } };
+  const end   = ()=>{ if(startedOnInteractive){ startedOnInteractive=false; return; } if(!dragging) return; dragging=false; card.style.transition=''; if(currentX > THRESHOLD){ haptic('success'); onRight?.(); reset(); } else if(currentX < -THRESHOLD){ haptic('heavy'); onLeft?.(); } else { reset(); } currentX=0; };
+  const reset = ()=>{ card.style.transform='translateX(0)'; li.classList.remove('swipe-left','swipe-right'); };
+  li.addEventListener('touchstart', e=>start(e.touches[0].clientX, e), {passive:true});
+  li.addEventListener('touchmove',  e=>move(e.touches[0].clientX),  {passive:true});
+  li.addEventListener('touchend',   end);
+  li.addEventListener('mousedown', e=>start(e.clientX, e));
+  window.addEventListener('mousemove', e=>move(e.clientX));
+  window.addEventListener('mouseup', end);
+};
   const move  = (x)=>{ if(!dragging) return; currentX = x - startX; card.style.transform = `translateX(${currentX}px)`; if(currentX>0){ li.classList.add('swipe-right'); li.classList.remove('swipe-left'); } else if(currentX<0){ li.classList.add('swipe-left'); li.classList.remove('swipe-right'); } };
   const end   = ()=>{ if(!dragging) return; dragging=false; card.style.transition=''; if(currentX > THRESHOLD){ haptic('success'); onRight?.(); reset(); } else if(currentX < -THRESHOLD){ haptic('heavy'); onLeft?.(); } else { reset(); } currentX=0; };
   const reset = ()=>{ card.style.transform='translateX(0)'; li.classList.remove('swipe-left','swipe-right'); };
