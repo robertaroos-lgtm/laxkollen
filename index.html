@@ -14,7 +14,7 @@
 
   <style>
     :root { --safe-bottom: env(safe-area-inset-bottom); }
-    body { font-family: sans-serif; background:#f6f7fb; margin:0; color:#111827; padding-bottom:var(--safe-bottom, 0); }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background:#f6f7fb; margin:0; color:#111827; padding-bottom:var(--safe-bottom, 0); }
     input, select, button, textarea { font-family: inherit; }
     input[type="date"]{ font-family: inherit; }
 
@@ -65,14 +65,24 @@
 
     .totals { margin:8px 0 8px; font-size:14px; color:#374151; background:#f8fafc; border:1px solid #eef0f5; border-radius:10px; padding:8px 12px; }
 
-    /* Lista (ghost, progress, text, exam, knappar) */
+    /* Lista */
     ul { list-style:none; padding:0; margin:0; }
     li { 
+      position:relative; overflow:hidden; /* för swipe-bakgrunder */
       display:grid; 
-      grid-template-columns: 32px 110px 1fr auto auto; 
-      gap:12px; align-items:center;
-      border:1px solid #eee; border-radius:12px; background:#fafbff; padding:12px; margin-bottom:8px; 
+      grid-template-columns: 1fr auto; 
+      gap:12px; align-items:center; 
+      border:1px solid #eee; border-radius:12px; background:#fafbff; padding:0; margin-bottom:8px; 
+      touch-action: pan-y;
     }
+    /* swipe-bakgrund */
+    li::before, li::after { content:""; position:absolute; inset:0; opacity:0; transition:opacity .2s; }
+    li::before { background:#e6ffec; }  /* klar */
+    li::after  { background:#ffe9e6; }  /* radera */
+    li.swipe-right::before { opacity:1; }
+    li.swipe-left::after   { opacity:1; }
+
+    .li-card { position:relative; z-index:1; background:#fafbff; padding:12px; border-radius:12px; transition: transform .15s ease-out; width:100%; display:grid; grid-template-columns: 1fr auto; gap:12px; }
 
     li.done .text { text-decoration:line-through; color:#6b7280; }
     li.overdue { border-color:#fecaca; }
@@ -82,57 +92,17 @@
     .text { color:#111827; }
     .meta-line { font-size:13px; color:#555; }
     .icon-btn { border:0; border-radius:6px; background:#eef0f6; width:32px; height:32px; cursor:pointer; }
-    .danger { background:#fee2e2; }
-    .danger:hover { background:#fecaca; }
 
     .progress-badge { font-size:12px; background:#eef0f6; border-radius:999px; padding:2px 8px; text-align:center; display:inline-block; min-width:60px; }
-    .ghost-cell { visibility:hidden; }
 
     .due-badge { font-size:12px; border-radius:999px; padding:2px 8px; background:#eef0f6; }
     .due-badge.today { background:#dbeafe; color:#1e40af; font-weight:600; }
     .due-badge.overdue { background:#fee2e2; color:#991b1b; font-weight:600; }
-    .exam-badge { font-size:11px; font-weight:800; letter-spacing:.3px; color:#7c2d12;
-      background:#fde68a; border:1px solid #f59e0b; border-radius:6px; padding:2px 6px; white-space:nowrap; }
-
-    /* Modal */
-    .modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,.25); display:none; align-items:center; justify-content:center; padding:16px; z-index:50; }
-    .modal { width:min(820px, 100%); background:#fff; border-radius:16px; padding:16px; box-shadow:0 20px 60px rgba(0,0,0,.25); max-height:90vh; overflow:auto; }
-    .modal h2 { margin:0 0 8px; }
-
-    /* Hantera barn – grupper och knappar */
-    .child-row { display:flex; gap:10px; align-items:flex-start; flex-direction:column; margin:8px 0; padding:10px; border:1px solid #eef0f5; border-radius:12px; background:#fafbff; }
-    .subjects-collection { display:flex; flex-direction:column; gap:8px; width:100%; }
-    .subjects-group { display:flex; flex-direction:column; gap:4px; }
-    .group-header { font-weight:700; color:#374151; }
-
-    /* ⬇️ Ingen sidscroll – vi radbryter knapparna */
-    .subject-row {
-      display:flex;
-      flex-wrap: wrap;      /* radbryt ämnesknappar */
-      gap:6px;
-      padding-bottom:4px;
-      overflow-x: visible;  /* ingen horisontell scroll */
-      white-space: normal;  /* tillåt radbrytning */
-    }
-
-    .sub-chip { display:inline-flex; align-items:center; gap:6px; background:#eef0f6; border:1px solid #e5e7eb; padding:4px 8px; border-radius:999px; font-size:12px; cursor:pointer; user-select:none; }
-    .sub-chip.active { background:#6366f1; color:#fff; border-color:#6366f1; }
-    .modal-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:10px; }
-    .note { font-size:13px; color:#6b7280; }
-    .danger-text { color:#b91c1c; }
+    .exam-badge { font-size:11px; font-weight:800; letter-spacing:.3px; color:#7c2d12; background:#fde68a; border:1px solid #f59e0b; border-radius:6px; padding:2px 6px; white-space:nowrap; }
 
     [hidden] { display:none !important; }
 
-    .toast{
-      position:fixed; left:50%; bottom:16px;
-      transform:translateX(-50%) translateY(20px);
-      background:#111827; color:#fff;
-      padding:10px 14px; border-radius:999px;
-      box-shadow:0 8px 24px rgba(0,0,0,.2);
-      opacity:0; pointer-events:none;
-      transition:opacity .2s ease, transform .2s ease;
-      font-size:14px; z-index:9999;
-    }
+    .toast{ position:fixed; left:50%; bottom:16px; transform:translateX(-50%) translateY(20px); background:#111827; color:#fff; padding:10px 14px; border-radius:999px; box-shadow:0 8px 24px rgba(0,0,0,.2); opacity:0; pointer-events:none; transition:opacity .2s ease, transform .2s ease; font-size:14px; z-index:9999; }
     .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
 
     /* ===== Mobil ===== */
@@ -144,9 +114,7 @@
       .actions-row { margin-bottom: 8px; }
 
       button { padding: 9px 12px; border-radius: 10px; }
-      select, input[type="text"], input[type="date"], input[type="number"] {
-        padding: 8px; font-size: 15px; border-radius: 10px;
-      }
+      select, input[type="text"], input[type="date"], input[type="number"] { padding: 8px; font-size: 15px; border-radius: 10px; }
 
       .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 8px 0 10px; }
       @media (max-width: 340px) { .summary { grid-template-columns: 1fr; } }
@@ -164,23 +132,8 @@
       .totals { padding: 8px 10px; font-size: 13px; }
 
       ul { margin-top: 6px; }
-      .ghost-cell { display: none !important; }
 
-      li {
-        grid-template-columns: 1fr auto;
-        grid-auto-rows: auto;
-        gap: 8px;
-        padding: 10px;
-        border-radius: 12px;
-      }
-
-      li > div:nth-of-type(1) { grid-column: 1; grid-row: 1; }
-      .meta-line { grid-column: 1; grid-row: 2; font-size: 12px; color: #4b5563; }
-      .due-badge { font-size: 11px; padding: 1px 6px; }
-      .exam-badge { font-size: 10px; padding: 1px 6px; border-radius: 5px; }
-
-      li > div.buttons-col { grid-column: 2; grid-row: 1 / span 2; display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
-      .icon-btn { width: 30px; height: 30px; border-radius: 8px; }
+      .li-card { padding:10px; }
 
       li.overdue { border-color: #fca5a5; }
       li.today { border-color: #93c5fd; }
@@ -188,7 +141,7 @@
       .modal { width: 100%; max-width: 100%; height: 92vh; max-height: 92vh; border-radius: 14px; padding: 12px; overflow: auto; }
       .subjects-collection { gap: 6px; }
       .subjects-group { gap: 2px; }
-      .subject-row { gap: 4px; } /* behåller wrap, bara tajtare gap */
+      .subject-row { gap: 4px; }
       .sub-chip { padding: 3px 7px; font-size: 12px; }
 
       .modal-actions { position: sticky; bottom: 0; background: #fff; padding-top: 8px; margin-top: 8px; }
@@ -382,10 +335,12 @@ renderAll(); ensureOnboarding(); toggleTimesForExam(); validateForm();
 /* Events */
 addBtn.onclick = addHomework;
 addQuickBtn.onclick = () => { if(!hasAnyChild()){ openModal(true); return; } toggleInputRow(); validateForm(); };
+
 document.addEventListener("keydown", (e)=>{
   const anyModalOpen = (modalBackdrop.style.display === "flex") || (editBackdrop.style.display === "flex");
   if(e.key === "Escape" && !anyModalOpen && !inputRow.hasAttribute("hidden")){ abortInput(); }
 });
+
 isExamInput.addEventListener("change", ()=>{ toggleTimesForExam(); validateForm(); });
 subjectSelect.addEventListener("change", validateForm);
 taskInput.addEventListener("input", validateForm);
@@ -618,53 +573,36 @@ function renderList(){
     if(t.done) li.classList.add("done");
     if(t.isExam) li.classList.add("exam");
 
-    /* (1) Ghost i st f checkbox-kolumn */
-    const ghost1 = document.createElement("div"); ghost1.className="ghost-cell"; li.appendChild(ghost1);
+    // Innehållskort som flyttas vid swipe
+    const card=document.createElement("div");
+    card.className="li-card";
 
-    /* (2) Progress / ghost */
-    if(!t.isExam && (t.timesTotal||1) > 1){
-      const prog=document.createElement("span");
-      const total = t.timesTotal || Math.max(1, t.timesLeft||1);
-      const doneCount = Math.max(0, total - (t.timesLeft ?? total));
-      prog.className="progress-badge";
-      prog.textContent = isNarrow ? `${doneCount}/${total}` : `${doneCount}/${total} gjorda`;
-      li.appendChild(prog);
-    } else {
-      const ghost2 = document.createElement("div"); ghost2.className="ghost-cell"; li.appendChild(ghost2);
-    }
-
-    /* (3) Text + meta */
-    const textWrap=document.createElement("div");
-    const text=document.createElement("div"); text.className="text";
-    text.textContent=`${subjectIcons[t.subj]||"📘"} ${t.subj}: ${t.task}`;
+    // Vänsterkolumn: text + meta
+    const left=document.createElement("div");
+    const text=document.createElement("div"); text.className="text"; text.textContent=`${subjectIcons[t.subj]||"📘"} ${t.subj}: ${t.task}`;
     const meta=document.createElement("div"); meta.className="meta-line";
     const dateNice = t.due ? formatDate(t.due) : "";
     const dueLabel = computeDueLabel(t, todayISO, dateNice);
     const dueClass  = computeDueClass(t, todayISO);
     meta.innerHTML = dueLabel ? `<span class="due-badge ${dueClass}">${dueLabel}</span>` : "";
-    /* OBS: "Gång kvar: X" borttagen enligt önskemål */
-    if(t.done && t.completedOn){ meta.innerHTML += ` • Klar: ${formatDate(t.completedOn)}`; }
-    textWrap.appendChild(text); textWrap.appendChild(meta);
-    li.appendChild(textWrap);
-
-    /* (4) Exam-badge */
-    const examWrap = document.createElement("div");
-    if(t.isExam){ const examB = document.createElement("span"); examB.className = "exam-badge"; examB.textContent = "PROV"; examWrap.appendChild(examB); }
-    li.appendChild(examWrap);
-
-    /* (5) Knappar */
-    const btns=document.createElement("div"); btns.className="buttons-col";
-    if(!t.isExam){
-      const tickBtn=document.createElement("button"); 
-      tickBtn.textContent="✔️"; 
-      tickBtn.className="icon-btn"; 
-      tickBtn.title="Bocka av en omgång / markera klar"; 
-      tickBtn.onclick=()=>tick(t.id);
-      btns.appendChild(tickBtn);
+    if(!t.isExam && (t.timesTotal||1) > 1){
+      const total = t.timesTotal || Math.max(1, t.timesLeft||1);
+      const doneCount = Math.max(0, total - (t.timesLeft ?? total));
+      meta.innerHTML += ` • <span class="progress-badge">${isNarrow?`${doneCount}/${total}`:`${doneCount}/${total} gjorda`}</span>`;
     }
-    const editBtn=document.createElement("button"); editBtn.textContent="⚙️"; editBtn.className="icon-btn"; editBtn.title="Redigera"; editBtn.onclick=()=>openEditModal(t.id); btns.appendChild(editBtn);
-    const delBtn=document.createElement("button"); delBtn.textContent="🗑️"; delBtn.className="icon-btn danger"; delBtn.title=t.isExam?"Radera prov":"Radera läxa"; delBtn.onclick=()=>removeItem(t.id); btns.appendChild(delBtn);
-    li.appendChild(btns);
+    if(t.done && t.completedOn){ meta.innerHTML += ` • Klar: ${formatDate(t.completedOn)}`; }
+    left.appendChild(text); left.appendChild(meta);
+
+    // Högerkolumn: endast Redigera + (ev) EXAM-badge
+    const right=document.createElement("div"); right.style.display="flex"; right.style.flexDirection="column"; right.style.alignItems="flex-end"; right.style.gap="6px";
+    if(t.isExam){ const examB=document.createElement("span"); examB.className="exam-badge"; examB.textContent="PROV"; right.appendChild(examB); }
+    const editBtn=document.createElement("button"); editBtn.textContent="⚙️"; editBtn.className="icon-btn"; editBtn.title="Redigera"; editBtn.onclick=()=>openEditModal(t.id); right.appendChild(editBtn);
+
+    card.appendChild(left); card.appendChild(right);
+    li.appendChild(card);
+
+    // Svep: höger -> tick, vänster -> radera
+    attachSwipe(li, ()=>{ if(!t.isExam) tick(t.id); else showToast("Provdatum styr avslut"); }, ()=> removeItem(t.id));
 
     listEl.appendChild(li);
   });
@@ -790,6 +728,23 @@ function resetInputs(){ taskInput.value=""; dueInput.value=""; timesInput.value=
 function formatDate(d){ try{ const [y,m,dd]=d.split("-"); return `${dd}/${m}/${y}`; } catch { return d; } }
 function plural(n, one, many){ return n===1 ? one : many; }
 let _toastTimer; function showToast(msg, ms=1800){ const el=document.getElementById('toast'); if(!el) return; el.textContent=msg; el.classList.add('show'); clearTimeout(_toastTimer); _toastTimer=setTimeout(()=> el.classList.remove('show'), ms); }
+
+/* ===== Svep-hjälpare ===== */
+function attachSwipe(li, onRight, onLeft){
+  const card = li.querySelector('.li-card');
+  const THRESHOLD = 72; // px för att trigga
+  let startX = 0, currentX = 0, dragging = false;
+  const start = (x)=>{ dragging=true; startX=x; card.style.transition='none'; li.classList.remove('swipe-left','swipe-right'); };
+  const move  = (x)=>{ if(!dragging) return; currentX = x - startX; card.style.transform = `translateX(${currentX}px)`; if(currentX>0){ li.classList.add('swipe-right'); li.classList.remove('swipe-left'); } else if(currentX<0){ li.classList.add('swipe-left'); li.classList.remove('swipe-right'); } };
+  const end   = ()=>{ if(!dragging) return; dragging=false; card.style.transition=''; if(currentX > THRESHOLD){ onRight?.(); reset(); } else if(currentX < -THRESHOLD){ onLeft?.(); } else { reset(); } currentX=0; };
+  const reset = ()=>{ card.style.transform='translateX(0)'; li.classList.remove('swipe-left','swipe-right'); };
+  li.addEventListener('touchstart', e=>start(e.touches[0].clientX), {passive:true});
+  li.addEventListener('touchmove',  e=>move(e.touches[0].clientX),  {passive:true});
+  li.addEventListener('touchend',   end);
+  li.addEventListener('mousedown', e=>start(e.clientX));
+  window.addEventListener('mousemove', e=>move(e.clientX));
+  window.addEventListener('mouseup', end);
+}
 
 /* PWA */
 if ('serviceWorker' in navigator) {
