@@ -82,6 +82,14 @@
     li.swipe-right::before { opacity:1; }
     li.swipe-left::after   { opacity:1; }
 
+    /* Ikoner som syns vid swipe (under kortet) */
+    .swipe-hint { position:absolute; top:50%; transform:translateY(-50%) scale(.92); opacity:0; transition:opacity .18s ease, transform .18s ease; z-index:0; pointer-events:none; }
+    .swipe-hint svg { width:28px; height:28px; display:block; }
+    .swipe-hint.check { left:12px; color:#059669; }   /* grön */
+    .swipe-hint.trash { right:12px; color:#dc2626; }  /* röd */
+    li.swipe-right .swipe-hint.check { opacity:1; transform:translateY(-50%) scale(1); }
+    li.swipe-left  .swipe-hint.trash { opacity:1; transform:translateY(-50%) scale(1); }
+
     .li-card { position:relative; z-index:1; background:#fafbff; padding:12px; border-radius:12px; transition: transform .15s ease-out; width:100%; display:grid; grid-template-columns: 1fr auto; gap:12px; }
 
     li.done .text { text-decoration:line-through; color:#6b7280; }
@@ -599,6 +607,12 @@ function renderList(){
     const editBtn=document.createElement("button"); editBtn.textContent="⚙️"; editBtn.className="icon-btn"; editBtn.title="Redigera"; editBtn.onclick=()=>openEditModal(t.id); right.appendChild(editBtn);
 
     card.appendChild(left); card.appendChild(right);
+    // Ikoner för swipe-feedback
+    const icCheck = document.createElement("div"); icCheck.className = "swipe-hint check"; icCheck.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>';
+    const icTrash = document.createElement("div"); icTrash.className = "swipe-hint trash"; icTrash.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg>';
+    li.appendChild(icCheck);
+    li.appendChild(icTrash);
+
     li.appendChild(card);
 
     // Svep: höger -> tick, vänster -> radera
@@ -730,13 +744,24 @@ function plural(n, one, many){ return n===1 ? one : many; }
 let _toastTimer; function showToast(msg, ms=1800){ const el=document.getElementById('toast'); if(!el) return; el.textContent=msg; el.classList.add('show'); clearTimeout(_toastTimer); _toastTimer=setTimeout(()=> el.classList.remove('show'), ms); }
 
 /* ===== Svep-hjälpare ===== */
+function haptic(type='light'){
+  try{
+    if('vibrate' in navigator){
+      if(type==='heavy') navigator.vibrate([18,60,18]);
+      else if(type==='medium') navigator.vibrate(30);
+      else if(type==='success') navigator.vibrate([8,40,8]);
+      else navigator.vibrate(10);
+    }
+  }catch{}
+}
+
 function attachSwipe(li, onRight, onLeft){
   const card = li.querySelector('.li-card');
   const THRESHOLD = 72; // px för att trigga
   let startX = 0, currentX = 0, dragging = false;
   const start = (x)=>{ dragging=true; startX=x; card.style.transition='none'; li.classList.remove('swipe-left','swipe-right'); };
   const move  = (x)=>{ if(!dragging) return; currentX = x - startX; card.style.transform = `translateX(${currentX}px)`; if(currentX>0){ li.classList.add('swipe-right'); li.classList.remove('swipe-left'); } else if(currentX<0){ li.classList.add('swipe-left'); li.classList.remove('swipe-right'); } };
-  const end   = ()=>{ if(!dragging) return; dragging=false; card.style.transition=''; if(currentX > THRESHOLD){ onRight?.(); reset(); } else if(currentX < -THRESHOLD){ onLeft?.(); } else { reset(); } currentX=0; };
+  const end   = ()=>{ if(!dragging) return; dragging=false; card.style.transition=''; if(currentX > THRESHOLD){ haptic('success'); onRight?.(); reset(); } else if(currentX < -THRESHOLD){ haptic('heavy'); onLeft?.(); } else { reset(); } currentX=0; };
   const reset = ()=>{ card.style.transform='translateX(0)'; li.classList.remove('swipe-left','swipe-right'); };
   li.addEventListener('touchstart', e=>start(e.touches[0].clientX), {passive:true});
   li.addEventListener('touchmove',  e=>move(e.touches[0].clientX),  {passive:true});
