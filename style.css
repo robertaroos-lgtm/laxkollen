@@ -1,4 +1,11 @@
 
+/* === v9: remove sideways scrolling globally === */
+html, body { overflow-x: hidden !important; }
+.app, .modal { overflow-x: hidden !important; }
+.summary, .subjects-collection, .subject-row, .child-row, .row, ul, li, .li-card { max-width: 100%; overflow-x: hidden; }
+.field { min-width: 0; } /* avoid flex items forcing overflow */
+.text { overflow-wrap: anywhere; } /* very long words/titles won't cause horizontal scroll */
+\n
 /* === v8: lock body scroll globally; allow internal scroll in .app and in modal === */
 html, body { height:100%; overflow:hidden; overscroll-behavior:none; -webkit-overflow-scrolling: touch; touch-action: pan-y; }
 .app { height:100%; overflow:auto; -webkit-overflow-scrolling: touch; }
