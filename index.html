@@ -144,5 +144,17 @@ if ('serviceWorker' in navigator) {
   });
 }
 </script>
+
+<script>
+document.addEventListener('touchmove', function (e) {
+  let el = e.target;
+  while (el) {
+    if (el.classList && (el.classList.contains('app') || el.classList.contains('modal'))) return;
+    el = el.parentElement;
+  }
+  e.preventDefault();
+}, { passive: false });
+</script>
+
 </body>
 </html>
