@@ -1,3 +1,7 @@
+html{ -webkit-text-size-adjust:100%; text-size-adjust:100%; }
+
+/* v10: prevent iOS input zoom */
+input, select, textarea { font-size:16px !important; line-height:1.3; }
 
 /* === v9: remove sideways scrolling globally === */
 html, body { overflow-x: hidden !important; }
@@ -24,8 +28,8 @@ h1 { margin:0 0 12px; }
 .topbar .spacer { flex:1; }
 .actions-row { display:flex; justify-content:flex-start; gap:8px; margin:0 0 12px; }
 
-select, input[type="text"], input[type="date"], input[type="number"] {
-  padding:10px; font-size:14px; border:1px solid #ddd; border-radius:8px; background:#fff; color:#000;
+select, input[type="text"], input[type="date"], input[type="number"], textarea {
+  padding:10px; font-size:16px; line-height:1.3; border:1px solid #ddd; border-radius:8px; background:#fff; color:#000;
 }
 input[disabled]{ background:#f3f4f6; color:#6b7280; }
 button { padding:10px 14px; border:0; border-radius:8px; cursor:pointer; }
