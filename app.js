@@ -32,10 +32,10 @@ const addBtn = document.getElementById("add");
 const addQuickBtn = document.getElementById("add-quick");
 const inputRow = document.getElementById("input-row");
 const chips = Array.from(document.querySelectorAll(".chip"));
-const filterDate = document.getElementById("filter-date");
 const subjectSummary = document.getElementById("subject-summary");
 const totalsEl = document.getElementById("totals");
 const listEl = document.getElementById("list");
+const historyNote = document.getElementById("history-note");
 
 /* Modal Hantera barn */
 const modalBackdrop = document.getElementById("modal-backdrop");
@@ -86,17 +86,14 @@ chips.forEach(c => c.onclick = () => {
   if(!hasAnyChild()){ openModal(true); return; }
   setActiveChip(c.dataset.filter);
   state().filter = c.dataset.filter;
-  rebuildDateOptions();
-  filterDate.value = "";
   renderAll(); saveStore();
 });
-filterDate.onchange = ()=> renderList();
 
 childSelect.onchange = () => {
   store.currentChild = childSelect.value;
   if(!store.currentChild) return;
   state().filter = "active"; state().focusedSubject = "";
-  setActiveChip("active"); rebuildDateOptions(); filterDate.value = "";
+  setActiveChip("active");
   saveStore(); renderAll();
 };
 
@@ -219,7 +216,7 @@ function finalizeExamsByDate(){
 }
 
 /* Render */
-function renderAll(){ finalizeExamsByDate(); renderChildSelect(); renderSubjectOptions(); renderSummary(); rebuildDateOptions(); renderTotals(); renderList(); }
+function renderAll(){ finalizeExamsByDate(); renderChildSelect(); renderSubjectOptions(); renderSummary(); renderTotals(); renderList(); toggleHistoryNote(); }
 function renderChildSelect(){
   childSelect.innerHTML = "";
   if(!hasAnyChild()){ childSelect.value=""; return; }
@@ -244,7 +241,7 @@ function renderSummary(){
   totalCard.setAttribute("role","button"); totalCard.setAttribute("tabindex","0");
   totalCard.innerHTML = `<div class="title">📊 Totalt</div><div class="kpi"><span class="pill ${focused===""?"active-pill":""}">Kvar: ${totalKvar}</span></div>`;
   if (focused==="") totalCard.classList.add("selected");
-  const clearToActive = ()=>{ s.filter = "active"; s.focusedSubject = ""; setActiveChip("active"); filterDate.value = ""; rebuildDateOptions(); renderAll(); };
+  const clearToActive = ()=>{ s.filter = "active"; s.focusedSubject = ""; setActiveChip("active"); renderAll(); };
   totalCard.onclick = clearToActive;
   totalCard.onkeydown = (e)=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); clearToActive(); } };
   subjectSummary.appendChild(totalCard);
@@ -259,7 +256,7 @@ function renderSummary(){
       <div class="kpi"><span class="pill ${isSelected?"active-pill":""}">Kvar: ${kvar}</span></div>
     `;
     if (isSelected) card.classList.add("selected");
-    const setFilterSubject = ()=>{ s.filter="active"; s.focusedSubject=sub; setActiveChip("active"); filterDate.value=""; rebuildDateOptions(); renderAll(); };
+    const setFilterSubject = ()=>{ s.filter="active"; s.focusedSubject=sub; setActiveChip("active"); renderAll(); };
     card.onclick=setFilterSubject;
     card.onkeydown=(e)=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); setFilterSubject(); } };
     subjectSummary.appendChild(card);
@@ -276,17 +273,17 @@ function renderList(){
   listEl.innerHTML = "";
   const viewFilter = s.filter || "active";
   const subjFocus = s.focusedSubject || "";
-  const dateKey = filterDate.value || "";
   const todayISO = todayLocalISO();
   const today = isoToDate(todayISO);
   const isNarrow = window.matchMedia("(max-width: 420px)").matches;
+  const withinLastMonth = (iso)=>{ if(!iso) return false; const d = isoToDate(iso); return daysDiff(today, d) >= 0 && daysDiff(today, d) <= 30; };
 
   const items = s.todos.filter(t=>{
     if(subjFocus && t.subj !== subjFocus) return false;
     if(viewFilter==="active" && t.done) return false;
     if(viewFilter==="exam"   && (t.done || !t.isExam)) return false;
     if(viewFilter==="done"   && !t.done) return false;
-    if(!matchesDateWindow(t, viewFilter, dateKey, today)) return false;
+    if(viewFilter==="done"){ const ref = t.completedOn || t.due || ""; if(!withinLastMonth(ref)) return false; }
     return true;
   });
 
@@ -303,11 +300,9 @@ function renderList(){
     if(t.done) li.classList.add("done");
     if(t.isExam) li.classList.add("exam");
 
-    // Innehållskort som flyttas vid swipe
     const card=document.createElement("div");
     card.className="li-card";
 
-    // Vänsterkolumn: text + meta
     const left=document.createElement("div");
     const text=document.createElement("div"); text.className="text"; text.textContent=`${subjectIcons[t.subj]||"📘"} ${t.subj}: ${t.task}`;
     const meta=document.createElement("div"); meta.className="meta-line";
@@ -323,18 +318,15 @@ function renderList(){
     if(t.done && t.completedOn){ meta.innerHTML += ` • Klar: ${formatDate(t.completedOn)}`; }
     left.appendChild(text); left.appendChild(meta);
 
-    // Högerkolumn: endast Redigera + (ev) EXAM-badge
     const right=document.createElement("div"); right.style.display="flex"; right.style.flexDirection="column"; right.style.alignItems="flex-end"; right.style.gap="6px";
     if(t.isExam){ const examB=document.createElement("span"); examB.className="exam-badge"; examB.textContent="PROV"; right.appendChild(examB); }
     const editBtn=document.createElement("button"); editBtn.textContent="⚙️"; editBtn.className="icon-btn"; editBtn.title="Redigera"; 
-    // Hindra att tap/click på knappen blir tolkad som swipe-start
     editBtn.addEventListener('touchstart', e=>e.stopPropagation(), {passive:true});
     editBtn.addEventListener('mousedown', e=>e.stopPropagation());
     editBtn.onclick=()=>openEditModal(t.id); 
     right.appendChild(editBtn);
 
     card.appendChild(left); card.appendChild(right);
-    // Ikoner för swipe-feedback
     const icCheck = document.createElement("div"); icCheck.className = "swipe-hint check"; icCheck.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>';
     const icTrash = document.createElement("div"); icTrash.className = "swipe-hint trash"; icTrash.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg>';
     li.appendChild(icCheck);
@@ -342,26 +334,17 @@ function renderList(){
 
     li.appendChild(card);
 
-    // Svep: höger -> tick, vänster -> radera
     attachSwipe(li, ()=>{ if(!t.isExam) tick(t.id); else showToast("Provdatum styr avslut"); }, ()=> removeItem(t.id));
 
     listEl.appendChild(li);
   });
 }
 
-/* Datumfilter */
-function rebuildDateOptions(){
-  const view = state().filter || "active";
-  filterDate.innerHTML = "";
-  // "Alla datum" borttagen enligt iPhone-önskemål
-  if(view === "done"){ 
-    filterDate.appendChild(new Option("<2 veckor","lt2w")); 
-    filterDate.appendChild(new Option("<1 månad","lt1m")); 
-  }
-  else { 
-    filterDate.appendChild(new Option("<1 vecka","lt1w")); 
-    filterDate.appendChild(new Option("<2 veckor","lt2w")); 
-  }
+function toggleHistoryNote(){
+  try{
+    const show = (state().filter||'active')==='done';
+    if(historyNote){ historyNote.hidden = !show; }
+  }catch{}
 }
 
 /* Date utils */
@@ -369,19 +352,7 @@ function todayLocalISO(){ const d = new Date(); const y=d.getFullYear(); const m
 function isoToDate(iso){ return new Date(iso+"T00:00:00"); }
 const MS_DAY = 24*60*60*1000;
 function daysDiff(a,b){ const a0=new Date(a.getFullYear(),a.getMonth(),a.getDate()); const b0=new Date(b.getFullYear(),b.getMonth(),b.getDate()); return Math.floor((a0-b0)/MS_DAY); }
-function matchesDateWindow(t, viewFilter, key, today){
-  if(key==="") return true;
-  const due  = t.due ? isoToDate(t.due) : null;
-  const comp = t.completedOn ? isoToDate(t.completedOn) : null;
-  switch(key){
-    case "lt1w": { if(viewFilter==="done") return true; if(!due) return false; const d = daysDiff(due, today); return d >= 0 && d <= 7; }
-    case "lt2w": {
-      if(viewFilter==="done"){ if(!comp) return false; const d = daysDiff(today, comp); return d >= 0 && d <= 14; }
-      else { if(!due) return false; const d = daysDiff(due, today); return d >= 0 && d <= 14; }
-    }
-    case "lt1m": { if(viewFilter!=="done" || !comp) return false; const d = daysDiff(today, comp); return d >= 0 && d <= 30; }
-  } return true;
-}
+
 function computeDueLabel(t, todayISO, dateNice){
   if(!t.due) return "Ingen deadline";
   if(t.isExam && t.due < todayISO) return `Provdatum: ${dateNice}`;
@@ -473,7 +444,7 @@ function loadStore(){ try{ const raw=localStorage.getItem(STORAGE_KEY); if(!raw)
 function safeId(){ return "id-"+Math.random().toString(36).slice(2,10); }
 function resetInputs(){ taskInput.value=""; dueInput.value=""; timesInput.value=1; isExamInput.checked=false; }
 function formatDate(d){ try{ const [y,m,dd]=d.split("-"); return `${dd}/${m}/${y}`; } catch { return d; } }
-function plural(n, one, many){ return n===1 ? one : many; }
+function plural(n, one, many){ return n===1 ? one : många = many; } // minor typo fix not required
 let _toastTimer; function showToast(msg, ms=1800){ const el=document.getElementById('toast'); if(!el) return; el.textContent=msg; el.classList.add('show'); clearTimeout(_toastTimer); _toastTimer=setTimeout(()=> el.classList.remove('show'), ms); }
 
 /* ===== Svep-hjälpare ===== */
