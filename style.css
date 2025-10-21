@@ -1,1 +1,10 @@
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:#f6f7fb;margin:0;color:#111827}/* Full CSS omitted in this short retry to ensure zip builds */
+
+.modal-backdrop{display:flex;position:fixed;inset:0;background:rgba(0,0,0,.4);align-items:center;justify-content:center}
+[hidden]{display:none!important}
+.modal{background:#fff;padding:16px;border-radius:12px;max-width:720px;width:96vw}
+.subjects-collection{display:flex;flex-direction:column;gap:8px}
+.subjects-group{display:flex;flex-direction:column;gap:6px}
+.group-header{font-size:12px;font-weight:700;color:#555;text-transform:uppercase}
+.subject-row{display:flex;flex-wrap:wrap;gap:6px}
+.sub-chip{background:#eef0f6;border:1px solid #e5e7eb;padding:6px 10px;border-radius:999px;cursor:pointer}
+.sub-chip.active{background:#6366f1;color:#fff;border-color:#6366f1}
