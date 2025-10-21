@@ -216,7 +216,7 @@ function finalizeExamsByDate(){
 }
 
 /* Render */
-function renderAll(){ finalizeExamsByDate(); renderChildSelect(); renderSubjectOptions(); renderSummary(); renderTotals(); renderList(); toggleHistoryNote(); }
+function renderAll(){ finalizeExamsByDate(); renderChildSelect(); renderSubjectOptions(); renderSummary();  renderList(); toggleHistoryNote(); }
 function renderChildSelect(){
   childSelect.innerHTML = "";
   if(!hasAnyChild()){ childSelect.value=""; return; }
@@ -263,9 +263,7 @@ function renderSummary(){
   });
 }
 
-function renderTotals(){
-  const s = state(); const total = s.todos.length; const active = s.todos.filter(t=>!t.done).length; const done = total - active;
-  totalsEl.textContent = `Totalt ${total} ${plural(total,"läxa","läxor")} • Aktiva ${active} • Klara ${done}`;
+ ${plural(total,"läxa","läxor")} • Aktiva ${active} • Klara ${done}`;
 }
 
 function renderList(){
