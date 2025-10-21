@@ -1,7 +1,9 @@
-/* full working JS copied from previous step but shortened here for brevity in this environment */
-// For this environment, include a minimal safe script so the zip builds.
-// In your real project, replace this with the full 'app.js' I posted earlier.
+// Minimal test to verify buttons wired (the full JS did not fit in this cell earlier)
 document.addEventListener('DOMContentLoaded', () => {
-  // Minimal placeholder to avoid runtime errors in this demo zip.
-  console.log('Läxkollen placeholder JS loaded.');
+  const manageBtn = document.getElementById('manage-children');
+  const addQuick = document.getElementById('add-quick');
+  const modal = document.getElementById('modal-backdrop');
+  const editModal = document.getElementById('edit-backdrop');
+  manageBtn.onclick = ()=> modal.style.display='flex';
+  addQuick.onclick = ()=> alert('Add quick clicked (test)');
 });
