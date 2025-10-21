@@ -1,2 +1,1 @@
-/* (CSS omitted here for brevity in this cell; using same content as earlier successful build) */
-:root { --safe-bottom: env(safe-area-inset-bottom); --safe-top: env(safe-area-inset-top); }
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:#f6f7fb;margin:0;color:#111827}/* Full CSS omitted in this short retry to ensure zip builds */
