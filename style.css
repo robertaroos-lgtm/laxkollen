@@ -38,7 +38,6 @@ button { padding:10px 14px; border:0; border-radius:8px; cursor:pointer; }
   display:inline-flex; align-items:center; justify-content:center;
   line-height:1; margin-left:2px;
 }
-/* v12: improve long-press by disabling iOS selection/callout on chips */
 .subject-chip, .subject-chip *{
   -webkit-user-select: none; user-select: none;
   -webkit-touch-callout: none;
@@ -70,18 +69,16 @@ li {
   border:1px solid #eee; border-radius:12px; background:#fafbff; padding:0; margin-bottom:8px; 
   touch-action: pan-y; max-width:100%;
 }
-/* swipe-bakgrund */
 li::before, li::after { content:""; position:absolute; inset:0; opacity:0; transition:opacity .2s; }
-li::before { background:#e6ffec; }  /* klar */
-li::after  { background:#ffe9e6; }  /* radera */
+li::before { background:#e6ffec; }
+li::after  { background:#ffe9e6; }
 li.swipe-right::before { opacity:1; }
 li.swipe-left::after   { opacity:1; }
 
-/* Ikoner för swipe-feedback (under kortet) */
 .swipe-hint { position:absolute; top:50%; transform:translateY(-50%) scale(.92); opacity:0; transition:opacity .18s ease, transform .18s ease; z-index:0; pointer-events:none; }
 .swipe-hint svg { width:28px; height:28px; display:block; }
-.swipe-hint.check { left:12px; color:#059669; }   /* grön */
-.swipe-hint.trash { right:12px; color:#dc2626; }  /* röd */
+.swipe-hint.check { left:12px; color:#059669; }
+.swipe-hint.trash { right:12px; color:#dc2626; }
 li.swipe-right .swipe-hint.check { opacity:1; transform:translateY(-50%) scale(1); }
 li.swipe-left  .swipe-hint.trash { opacity:1; transform:translateY(-50%) scale(1); }
 
@@ -130,36 +127,21 @@ li.exam .text { font-weight:700; }
   .due-badge{ font-size:11px; }
 }
 
-/* v13.1: Gör ämnesikonerna mindre i Hantera barn-dialogen */
-.sub-chip {
-  font-size: 14px;
-  padding: 6px 10px;
-  line-height: 1.2;
-}
-.subjects-group .subject-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 10px;
-}
-
-
-/* v13.2: Kompaktare ämneschips i Hantera barn */
+/* v13.3: Tightare ämneschips i Hantera barn */
 .sub-chip {
   font-size: 13px;
-  padding: 4px 8px;
+  padding: 3px 6px;
   line-height: 1.1;
-  border-radius: 12px;
-  background: #f1f3f9;
-  margin: 3px;
+  border-radius: 10px;
+  background: #f3f4f8;
   min-width: unset;
 }
 
 .subjects-group .subject-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 8px;
+  gap: 4px;
+  margin-bottom: 6px;
   justify-content: flex-start;
 }
 
@@ -168,3 +150,10 @@ li.exam .text { font-weight:700; }
   color: #fff;
 }
 
+/* v13.4: Kompaktare rubriker för ämnesgrupper */
+.group-header {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  margin: 4px 0 2px 0;
+}
