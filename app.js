@@ -37,18 +37,64 @@ function makeSubjectChip(labelFull, code, kvar, isSelected, onClick){
   chip.setAttribute('aria-pressed', isSelected?'true':'false');
   chip.setAttribute('title', labelFull);
   chip.setAttribute('aria-label', `${labelFull}${kvar>0?`, ${kvar} kvar`:''}`);
-  const iconSpan=document.createElement('span'); iconSpan.textContent=(subjectIcons[labelFull]||'📘');
-  const codeSpan=document.createElement('span'); codeSpan.className='subject-code'; codeSpan.textContent=' ' + code;
-  chip.appendChild(iconSpan); chip.appendChild(codeSpan);
-  if(kvar>0){ const b=document.createElement('span'); b.className='subject-badge'; b.textContent=String(kvar); chip.appendChild(b); }
+
+  const iconSpan=document.createElement('span');
+  iconSpan.textContent=(subjectIcons[labelFull]||'📘');
+
+  const codeSpan=document.createElement('span');
+  codeSpan.className='subject-code';
+  codeSpan.textContent=' ' + code;
+
+  chip.appendChild(iconSpan);
+  chip.appendChild(codeSpan);
+
+  if(kvar>0){
+    const b=document.createElement('span');
+    b.className='subject-badge';
+    b.textContent=String(kvar);
+    chip.appendChild(b);
+  }
+
+  // Toggle focus on click/keyboard
   chip.onclick=()=>onClick();
-  let pressTimer=null;
-  chip.addEventListener('touchstart', ()=>{ pressTimer=setTimeout(()=>showToast(labelFull, 1200), 600); }, {passive:true});
+  chip.addEventListener('keydown', e=>{
+    if(e.key==='Enter'||e.key===' '){ e.preventDefault(); onClick(); }
+  });
+
+  // Prevent iOS selection / context menu
+  chip.addEventListener('contextmenu', e=>e.preventDefault());
+  chip.addEventListener('selectstart', e=>e.preventDefault());
+
+  // Long-press tooltip with movement threshold (iOS-safe)
+  let pressTimer=null, sx=0, sy=0;
+
+  const start=(x,y)=>{
+    sx=x; sy=y;
+    clearTimeout(pressTimer);
+    pressTimer=setTimeout(()=>{ showToast(labelFull, 1200); }, 500); // 500ms
+  };
+
+  const move=(x,y)=>{
+    if(!pressTimer) return;
+    const dx=Math.abs(x-sx), dy=Math.abs(y-sy);
+    if(dx>10 || dy>10){ clearTimeout(pressTimer); pressTimer=null; }
+  };
+
   const clear=()=>{ if(pressTimer){ clearTimeout(pressTimer); pressTimer=null; } };
+
+  chip.addEventListener('touchstart', e=>{
+    const t=e.touches[0];
+    start(t.clientX,t.clientY);
+  }, {passive:true});
+
+  chip.addEventListener('touchmove', e=>{
+    const t=e.touches[0];
+    move(t.clientX,t.clientY);
+  }, {passive:true});
+
   chip.addEventListener('touchend', clear);
-  chip.addEventListener('touchmove', clear);
   chip.addEventListener('touchcancel', clear);
-  chip.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); onClick(); } });
+
   return chip;
 }
 

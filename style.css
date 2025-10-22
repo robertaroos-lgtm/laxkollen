@@ -25,6 +25,16 @@
 
 html{ -webkit-text-size-adjust:100%; text-size-adjust:100%; }
 
+/* v12: disable iOS selection/callout on subject chips */
+.subject-chip,
+.subject-chip * {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
 /* v10: prevent iOS input zoom */
 input, select, textarea { font-size:16px !important; line-height:1.3; }
 
