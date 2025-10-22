@@ -2,7 +2,6 @@
   "name": "Läxkollen",
   "short_name": "Läxkollen",
   "start_url": ".",
-  "scope": ".",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#6366f1",
@@ -20,6 +19,5 @@
       "purpose": "any maskable"
     }
   ],
-  "lang": "sv-SE",
-  "dir": "ltr"
+  "lang": "sv-SE"
 }
