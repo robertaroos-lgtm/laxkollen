@@ -280,13 +280,11 @@ function renderSummary(){
   const s = state(); const focused = s.focusedSubject || ''; const totalKvar = s.todos.filter(t=>!t.done).length;
   const wrap = subjectSummary; wrap.innerHTML='';
 
-  // Alla-chip
   const allChip = makeSubjectChip('Alla', 'Alla', totalKvar, (focused===''), ()=>{
     s.filter='active'; s.focusedSubject=''; setActiveChip('active'); renderAll();
   });
   wrap.appendChild(allChip);
 
-  // Per-ämne
   ALL_SUBJECTS.filter(sub=>s.subjects.includes(sub)).forEach(sub=>{
     const kvar = s.todos.filter(t=>t.subj===sub && !t.done).length;
     const code = subjectAbbrev[sub] || sub.slice(0,2);
@@ -306,7 +304,6 @@ function renderList(){
   const todayISO = todayLocalISO();
   const today = isoToDate(todayISO);
 
-  // Show 30-day notice for history
   historyNotice.hidden = !(viewFilter === 'done');
 
   const items = s.todos.filter(t=>{
@@ -314,7 +311,6 @@ function renderList(){
     if(viewFilter==="active" && t.done) return false;
     if(viewFilter==="exam"   && (t.done || !t.isExam)) return false;
     if(viewFilter==="done"   && !t.done) return false;
-    // history window: last 30 days only
     if(viewFilter==="done"){
       if(!t.completedOn) return false;
       const d = daysDiff(today, isoToDate(t.completedOn));
@@ -358,7 +354,6 @@ function renderList(){
     const right=document.createElement("div");
     right.className="right-actions";
 
-    // PROV-badge före kugghjulet, samma rad
     if(t.isExam){ const examB=document.createElement("span"); examB.className="exam-badge"; examB.textContent="PROV"; right.appendChild(examB); }
 
     const editBtn=document.createElement("button"); editBtn.textContent="⚙️"; editBtn.className="icon-btn"; editBtn.title="Redigera";
@@ -369,7 +364,6 @@ function renderList(){
 
     card.appendChild(left); card.appendChild(right);
 
-    // swipe hints
     const icCheck = document.createElement("div"); icCheck.className = "swipe-hint check"; icCheck.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>';
     const icTrash = document.createElement("div"); icTrash.className = "swipe-hint trash"; icTrash.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg>';
     li.appendChild(icCheck);
@@ -393,7 +387,7 @@ function computeDueLabel(t, todayISO, dateNice){
   if(t.isExam && t.due < todayISO) return `Provdatum: ${dateNice}`;
   if(!t.done && t.due === todayISO) return "Idag";
   if(!t.done && t.due < todayISO) return "Försenad";
-  return `${dateNice}`; // utan 'Till: '
+  return `${dateNice}`;
 }
 function computeDueClass(t, todayISO){
   if(!t.due) return "";

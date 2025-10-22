@@ -129,3 +129,16 @@ li.exam .text { font-weight:700; }
   .li-card { padding:10px; gap:10px; }
   .due-badge{ font-size:11px; }
 }
+
+/* v13.1: Gör ämnesikonerna mindre i Hantera barn-dialogen */
+.sub-chip {
+  font-size: 14px;
+  padding: 6px 10px;
+  line-height: 1.2;
+}
+.subjects-group .subject-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
