@@ -144,6 +144,9 @@ li.exam .text { font-weight:700; }
   line-height: 1;
   opacity: .9;
 }
+/* v13: PROV-badge i samma rad – linjering */
+.exam-badge { display: inline-flex; align-items: center; line-height: 1; }
+
 @media (max-width: 420px) {
   .exam-icon {
     font-size: 16px;
