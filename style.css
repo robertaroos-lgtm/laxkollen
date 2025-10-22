@@ -142,3 +142,29 @@ li.exam .text { font-weight:700; }
   gap: 6px;
   margin-bottom: 10px;
 }
+
+
+/* v13.2: Kompaktare ämneschips i Hantera barn */
+.sub-chip {
+  font-size: 13px;
+  padding: 4px 8px;
+  line-height: 1.1;
+  border-radius: 12px;
+  background: #f1f3f9;
+  margin: 3px;
+  min-width: unset;
+}
+
+.subjects-group .subject-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+  justify-content: flex-start;
+}
+
+.subjects-group .subject-row .sub-chip.active {
+  background: #6366f1;
+  color: #fff;
+}
+
