@@ -23,7 +23,6 @@ button { padding:10px 14px; border:0; border-radius:8px; cursor:pointer; }
 .ghost { background:#eef0f6; }
 .danger-text { color:#b91c1c; }
 
-/* Subject chips compact + badges */
 #subject-summary { display:flex; flex-wrap:wrap; gap:8px; margin:8px 0 10px; overflow-x:hidden; }
 .subject-chip{
   display:inline-flex; align-items:center; gap:6px;
@@ -50,7 +49,6 @@ button { padding:10px 14px; border:0; border-radius:8px; cursor:pointer; }
 .field { display:flex; flex-direction:column; flex:1; min-width:160px; }
 .field label { font-size:13px; font-weight:600; margin-bottom:4px; color:#374151; }
 
-/* PROV kompakt */
 .field.prov { flex:0 0 auto; min-width:44px; width:44px; }
 .field.prov label { margin-bottom:2px; }
 .field.prov .checkline { display:flex; align-items:center; justify-content:flex-start; gap:0; padding:0; margin:0; }
@@ -61,7 +59,6 @@ button { padding:10px 14px; border:0; border-radius:8px; cursor:pointer; }
 
 .notice{ font-size:12px; color:#6b7280; margin: 2px 0 8px; }
 
-/* Lista */
 ul { list-style:none; padding:0; margin:0; max-width:100%; overflow-x:hidden; }
 li { 
   position:relative; overflow:hidden;
@@ -104,15 +101,12 @@ li.exam .text { font-weight:700; }
 
 [hidden] { display:none !important; }
 
-/* === MODAL OVERLAY === */
 .modal-backdrop{ position:fixed; inset:0; background:rgba(17,24,39,.44); backdrop-filter: blur(2px); z-index:9999; display:flex; align-items:center; justify-content:center; padding:16px; }
 .modal{ width: min(920px, 96vw); max-height: 92vh; overflow:auto; background:#fff; border-radius:16px; padding:16px; box-shadow:0 10px 30px rgba(0,0,0,.2); }
 
-/* Toast */
 .toast{ position:fixed; left:50%; bottom:16px; transform:translateX(-50%) translateY(20px); background:#111827; color:#fff; padding:10px 14px; border-radius:999px; box-shadow:0 8px 24px rgba(0,0,0,.2); opacity:0; pointer-events:none; transition:opacity .2s ease, transform .2s ease; font-size:14px; z-index:10000; }
 .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
 
-/* Mobile */
 @media (max-width: 420px) {
   body { font-size: 15px; padding-top: var(--safe-top); }
   .app { margin: 8px; padding: 14px; border-radius: 14px; }
@@ -127,33 +121,7 @@ li.exam .text { font-weight:700; }
   .due-badge{ font-size:11px; }
 }
 
-/* v13.3: Tightare ämneschips i Hantera barn */
-.sub-chip {
-  font-size: 13px;
-  padding: 3px 6px;
-  line-height: 1.1;
-  border-radius: 10px;
-  background: #f3f4f8;
-  min-width: unset;
-}
-
-.subjects-group .subject-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-bottom: 6px;
-  justify-content: flex-start;
-}
-
-.subjects-group .subject-row .sub-chip.active {
-  background: #6366f1;
-  color: #fff;
-}
-
-/* v13.4: Kompaktare rubriker för ämnesgrupper */
-.group-header {
-  font-size: 12px;
-  font-weight: 600;
-  color: #6b7280;
-  margin: 4px 0 2px 0;
-}
+.sub-chip { font-size: 13px; padding: 3px 6px; line-height: 1.1; border-radius: 10px; background: #f3f4f8; min-width: unset; }
+.subjects-group .subject-row { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; justify-content: flex-start; }
+.subjects-group .subject-row .sub-chip.active { background: #6366f1; color: #fff; }
+.group-header { font-size: 12px; font-weight: 600; color: #6b7280; margin: 4px 0 2px 0; }

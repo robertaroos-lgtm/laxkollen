@@ -6,9 +6,6 @@
   <title>Läxkollen</title>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#6366f1">
-  <link rel="apple-touch-icon" href="icons/icon-192-LK.png">
-  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192-LK.png">
-  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512-LK.png">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -128,16 +125,6 @@
 
 <script src="app.js" defer></script>
 <script>
-// Prevent background rubber-banding; allow scroll only in .app/.modal
-document.addEventListener('touchmove', function (e) {
-  let el = e.target;
-  while (el) {
-    if (el.classList && (el.classList.contains('app') || el.classList.contains('modal'))) return;
-    el = el.parentElement;
-  }
-  e.preventDefault();
-}, { passive: false });
-
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(console.error));
 }
