@@ -6,7 +6,10 @@
   <title>Läxkollen</title>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#6366f1">
-  <link rel="stylesheet" href="style.css">
+  <link rel="apple-touch-icon" href="icons/icon-192-LK.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192-LK.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512-LK.png">
+  <link rel="stylesheet" href="style.css?v=13.4.3">
 </head>
 <body>
 <div class="app">
@@ -63,10 +66,10 @@
     <h2 id="manage-title">Hantera barn</h2>
     <div class="note" id="onboarding-note" style="display:none;">Välkommen! Börja med att lägga till ett barn och välja ämnen.</div>
 
-    <div style="margin-top:10px;">
+    <div style="margin-top:10px">
       <strong>Lägg till nytt barn</strong>
       <div class="child-row">
-        <input id="new-child-name" type="text" placeholder="Barnets namn" style="min-width:200px;">
+        <input id="new-child-name" type="text" placeholder="Barnets namn" style="min-width:200px">
         <div class="subjects-collection" id="new-child-subjects"></div>
         <button id="save-new-child" class="primary">Lägg till barn</button>
       </div>
@@ -77,7 +80,7 @@
       </div>
     </div>
 
-    <hr style="border:none;border-top:1px solid #eee;margin:12px 0;">
+    <hr style="border:none;border-top:1px solid #eee;margin:12px 0">
 
     <div>
       <strong>Aktuella barn</strong>
@@ -123,10 +126,10 @@
 
 <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
-<script src="app.js" defer></script>
+<script src="app.js?v=13.4.3" defer></script>
 <script>
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(console.error));
+  window.addEventListener('load', function(){ navigator.serviceWorker.register('./sw.js').catch(console.error); });
 }
 </script>
 </body>
