@@ -13,7 +13,7 @@ const modalBackdrop=$("modal-backdrop"), manageBtn=$("manage-children"), childre
 const editBackdrop=$("edit-backdrop"), editSubject=$("edit-subject"), editTask=$("edit-task"), editIsExam=$("edit-is-exam"), editDue=$("edit-due"), editTimes=$("edit-times"), editCancel=$("edit-cancel"), editSave=$("edit-save");
 let editingId=null;
 
-document.addEventListener("DOMContentLoaded", init);
+document.addEventListener("DOMContentLoaded", ()=>{ try{ init(); }catch(e){ console.error(e); } });
 
 function init(){
   Array.from(document.querySelectorAll('input,select,textarea')).forEach(el=>{el.style.fontSize='16px';});
