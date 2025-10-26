@@ -210,7 +210,7 @@ function renderAll(){
   renderSubjectOptions();
   renderSummary();
   renderList();
-  renderChildrenList(); // så listan i modalen alltid är uppdaterad
+  renderChildrenList(); // uppdatera listan i modalen
 }
 
 function renderChildSelect(){
@@ -291,11 +291,11 @@ function renderList(){
     if(t.done) li.classList.add("done");
     if(t.isExam) li.classList.add("exam");
 
-    const card=document.createElement("div"); card.className="li-card";
+    const card=document.createElement("div"); card.className="li-card li-card-lg"; // större kort
 
     const left=document.createElement("div"); left.className="li-main";
-    const text=document.createElement("div"); text.className="text"; text.textContent=`${subjectIcons[t.subj]||"📘"} ${t.subj}: ${t.task}`;
-    const meta=document.createElement("div"); meta.className="meta-line"; const dateNice=t.due?formatDate(t.due):"";
+    const text=document.createElement("div"); text.className="text text-lg"; text.textContent=`${subjectIcons[t.subj]||"📘"} ${t.subj}: ${t.task}`;
+    const meta=document.createElement("div"); meta.className="meta-line meta-lg"; const dateNice=t.due?formatDate(t.due):"";
     meta.textContent = t.due ? dateNice : "Ingen deadline";
     if(!t.isExam && (t.timesTotal||1)>1){
       const total=t.timesTotal||Math.max(1,t.timesLeft||1);
@@ -307,7 +307,7 @@ function renderList(){
 
     const right=document.createElement("div"); right.className="right-actions";
     if(t.isExam){ const examB=document.createElement("span"); examB.className="exam-badge"; examB.textContent="PROV"; right.appendChild(examB); }
-    const editBtn=document.createElement("button"); editBtn.textContent="⚙️"; editBtn.className="icon-btn"; editBtn.title="Redigera";
+    const editBtn=document.createElement("button"); editBtn.textContent="⚙️"; editBtn.className="icon-btn icon-btn-lg"; editBtn.title="Redigera";
     editBtn.addEventListener('touchstart', e=>e.stopPropagation(), {passive:true});
     editBtn.addEventListener('mousedown', e=>e.stopPropagation());
     editBtn.addEventListener('click', ()=>openEditModal(t.id));
@@ -365,31 +365,123 @@ function closeModal(){
 function renderChildrenList(){
   if(!childrenList) return;
   childrenList.innerHTML='';
-  if(!hasAnyChild()){
+
+  const names = Object.keys(store.children).sort();
+  if(names.length===0){
     const p=document.createElement('p');
     p.textContent="Inga barn tillagda ännu.";
     childrenList.appendChild(p);
     return;
   }
-  Object.keys(store.children).sort().forEach(name=>{
-    const box=document.createElement('div');
-    box.style.border='1px solid #eee';
-    box.style.borderRadius='10px';
-    box.style.padding='8px';
-    box.style.margin='6px 0';
 
-    const title=document.createElement('div');
-    title.style.fontWeight='700';
-    title.style.marginBottom='4px';
-    title.textContent=name;
-    box.appendChild(title);
+  names.forEach(name=>{
+    const data = store.children[name];
 
-    const subs=document.createElement('div');
-    const s=store.children[name];
-    subs.textContent = (s.subjects&&s.subjects.length)? s.subjects.join(', ') : '(Inga ämnen valda)';
-    box.appendChild(subs);
+    const box = document.createElement('div');
+    box.className = 'child-box';
 
+    const header = document.createElement('button');
+    header.type='button';
+    header.className='child-row';
+    header.innerHTML = `<span class="child-name">${name}</span><span class="child-subjects-preview">${(data.subjects||[]).join(', ')||'(Inga ämnen)'}</span>`;
+    box.appendChild(header);
+
+    const panel = document.createElement('div');
+    panel.className = 'child-panel hidden';
+
+    // Editor content
+    const nameLabel = document.createElement('label');
+    nameLabel.className = 'fld-label';
+    nameLabel.textContent = 'Namn';
+    const nameInput = document.createElement('input');
+    nameInput.type='text';
+    nameInput.className='fld-input';
+    nameInput.value=name;
+
+    const subjLabel = document.createElement('div');
+    subjLabel.className='fld-label';
+    subjLabel.textContent='Aktiva ämnen';
+
+    const subjWrap = document.createElement('div');
+    subjWrap.className='subjects-picker-wrap';
+
+    const preSel = new Set(data.subjects||[]);
+    renderSubjectPicker(subjWrap, preSel);
+
+    const btnRow = document.createElement('div');
+    btnRow.className='btn-row';
+
+    const saveBtn = document.createElement('button');
+    saveBtn.type='button'; saveBtn.className='btn btn-primary';
+    saveBtn.textContent='Spara';
+
+    const delBtn = document.createElement('button');
+    delBtn.type='button'; delBtn.className='btn btn-danger';
+    delBtn.textContent='Ta bort';
+
+    const closeBtn = document.createElement('button');
+    closeBtn.type='button'; closeBtn.className='btn';
+    closeBtn.textContent='Stäng';
+
+    btnRow.appendChild(saveBtn);
+    btnRow.appendChild(delBtn);
+    btnRow.appendChild(closeBtn);
+
+    panel.appendChild(nameLabel);
+    panel.appendChild(nameInput);
+    panel.appendChild(subjLabel);
+    panel.appendChild(subjWrap);
+    panel.appendChild(btnRow);
+
+    box.appendChild(panel);
     childrenList.appendChild(box);
+
+    header.addEventListener('click', ()=>{
+      panel.classList.toggle('hidden');
+    });
+
+    saveBtn.addEventListener('click', ()=>{
+      const newName = (nameInput.value||'').trim();
+      const selectedSet = subjWrap._selectedSet || new Set();
+      const subjects = Array.from(selectedSet);
+
+      if(!newName){ alert('Ange namn.'); return; }
+      if(subjects.length===0){ alert('Välj minst ett ämne.'); return; }
+
+      // Rename if needed
+      if(newName!==name){
+        if(store.children[newName]){ alert('Det finns redan ett barn med detta namn.'); return; }
+        store.children[newName] = store.children[name];
+        delete store.children[name];
+        if(store.currentChild===name) store.currentChild=newName;
+      }
+
+      store.children[newName].subjects = subjects;
+      saveStore();
+      renderChildrenList();
+      renderChildSelect();
+      renderSubjectOptions();
+    });
+
+    delBtn.addEventListener('click', ()=>{
+      if(!confirm(`Ta bort ${name}?`)) return;
+      delete store.children[name];
+      if(store.currentChild===name){
+        const remain = Object.keys(store.children);
+        store.currentChild = remain[0] || '';
+      }
+      saveStore();
+      renderChildrenList();
+      renderChildSelect();
+      renderSubjectOptions();
+      if(!hasAnyChild()){ // om inga barn kvar, visa onboarding
+        ensureOnboarding();
+      }
+    });
+
+    closeBtn.addEventListener('click', ()=>{
+      panel.classList.add('hidden');
+    });
   });
 }
 
@@ -418,7 +510,7 @@ function renderSubjectPicker(container, selectedSet){
     container.appendChild(row);
   });
 
-  // spara valet på containern så addNewChild kan läsa
+  // spara valet på containern så addNewChild/redigering kan läsa
   container._selectedSet = selectedSet;
 }
 
