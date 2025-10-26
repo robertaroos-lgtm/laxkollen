@@ -1,7 +1,23 @@
 (function(){
 'use strict';
 
-/* ====== DATA ====== */
+/* ===== DEBUG ===== */
+window.addEventListener('error', (e)=>{
+  console.error('[LK] Uncaught:', e.error||e.message||e);
+  showDebug('Error: '+(e.message||'unknown'));
+});
+window.addEventListener('unhandledrejection', (e)=>{
+  console.error('[LK] Rejection:', e.reason);
+  showDebug('Promise: '+(e.reason&&e.reason.message||e.reason||'unknown'));
+});
+function showDebug(msg){
+  try{
+    const el=document.getElementById('dbg'); if(!el) return;
+    el.textContent='DEBUG: '+msg; el.hidden=false;
+  }catch(_){}
+}
+
+/* ===== DATA ===== */
 const SUBJECT_GROUPS=[
   {title:"Språk",items:["Franska","Engelska","Spanska","Svenska","Italienska","Tyska"]},
   {title:"NO",items:["Biologi","Fysik","Kemi","Naturkunskap","NO"]},
@@ -15,21 +31,19 @@ const ALL_SUBJECTS=SUBJECT_GROUPS.flatMap(g=>g.items);
 
 const STORAGE_KEY="läxkollen-multi-children-v1";
 let store=loadStore(); if(!store.children) store.children={};
+let modalWired=false;
 
-// DOM refs (filled in bindDom)
 const $=id=>document.getElementById(id);
 let childSelect,subjectSelect,taskInput,dueInput,timesInput,isExamInput,addBtn,addQuickBtn,inputRow,subjectSummary,listEl,historyNotice;
 let modalBackdrop,manageBtn,childrenList,newChildName,newChildSubjects,closeModalBtn,cancelModalBtn,onboardingNote;
 let editBackdrop,editSubject,editTask,editIsExam,editDue,editTimes,editCancel,editSave;
-let modalWired=false;
 
-/* ====== BOOT ====== */
 document.addEventListener('DOMContentLoaded', ()=>{
   try{
     bindDom();
     init();
-    if(!hasAnyChild()) openModal(true); // Force onboarding
-  }catch(e){ console.error(e); }
+    if(!hasAnyChild()) openModal(true);
+  }catch(e){ showDebug('init failed'); console.error(e); }
 });
 
 function bindDom(){
@@ -44,21 +58,46 @@ function bindDom(){
 }
 
 function init(){
-  // prevent iOS zoom
   Array.from(document.querySelectorAll('input,select,textarea')).forEach(el=>{ el.style.fontSize='16px'; });
 
-  safeOn(addBtn,'click', addHomework);
-  safeOn(addQuickBtn,'click', ()=>{ if(!hasAnyChild()){ openModal(true); return; } toggleInputRow(); validateForm(); });
-  safeOn(isExamInput,'change', ()=>{ toggleTimesForExam(); validateForm(); });
-  safeOn(subjectSelect,'change', validateForm);
-  safeOn(taskInput,'input', validateForm);
-  safeOn(dueInput,'change', validateForm);
+  on(addBtn,'click', addHomework);
+  on(addQuickBtn,'click', ()=>{ if(!hasAnyChild()){ openModal(true); return; } toggleInputRow(); validateForm(); });
+  on(isExamInput,'change', ()=>{ toggleTimesForExam(); validateForm(); });
+  on(subjectSelect,'change', validateForm);
+  on(taskInput,'input', validateForm);
+  on(dueInput,'change', validateForm);
 
-  safeOn(editIsExam,'change', toggleEditTimesForExam);
-  safeOn(editCancel,'click', ()=> closeEditModal());
-  safeOn(editSave,'click', saveEditChanges);
+  on(editIsExam,'change', toggleEditTimesForExam);
+  on(editCancel,'click', ()=> closeEditModal());
+  on(editSave,'click', saveEditChanges);
 
-  safeOn(manageBtn,'click', ()=>openModal(false));
+  on(manageBtn,'click', ()=>openModal(false));
+
+  // Global delegation fallbacks
+  document.body.addEventListener('click', (e)=>{
+    const b=e.target.closest('button');
+    if(!b) return;
+    const txt=(b.textContent||'').trim().toLowerCase();
+    if(/hantera barn/.test(txt)){ e.preventDefault(); openModal(false); return; }
+    if(modalBackdrop && !modalBackdrop.hasAttribute('hidden')){
+      if(/lägg till barn|lägg till|spara och stäng/.test(txt)){ e.preventDefault(); addNewChild(); return; }
+      if(/^stäng$/.test(txt)){ e.preventDefault(); closeModal(); return; }
+      if(/^avbryt$/.test(txt)){ e.preventDefault(); closeModal(true); return; }
+    }
+  }, {passive:false});
+
+  // Subject chip delegation in whole doc
+  document.body.addEventListener('click', (e)=>{
+    const chip=e.target.closest('.sub-chip');
+    if(!chip) return;
+    e.preventDefault();
+    chip.classList.toggle('active');
+    const wrap=chip.closest('.subjects-picker-wrap');
+    if(wrap){
+      const chosen=Array.from(wrap.querySelectorAll('.sub-chip.active .t')).map(t=>t.textContent.trim());
+      wrap._selectedSet=new Set(chosen);
+    }
+  }, {passive:false});
 
   wireFilterChips();
   migrateStore();
@@ -66,9 +105,9 @@ function init(){
   toggleTimesForExam(); validateForm();
 }
 
-function safeOn(el,ev,fn){ if(el && el.addEventListener){ el.addEventListener(ev,fn,{passive:false}); }}
+function on(el,ev,fn){ if(el&&el.addEventListener) el.addEventListener(ev,fn,{passive:false}); }
 
-/* ====== STATE ====== */
+/* ===== STATE ===== */
 function hasAnyChild(){ return store.children && Object.keys(store.children).length>0; }
 function state(){
   const name=store.currentChild;
@@ -81,39 +120,24 @@ function state(){
   return s;
 }
 
-/* ====== MODAL ====== */
+/* ===== MODAL ===== */
 function openModal(isOnboarding){
   if(!modalBackdrop) return;
   if(onboardingNote) onboardingNote.style.display = isOnboarding ? 'block' : 'none';
-
-  // Reset "lägg till"-delen
   if(newChildName) newChildName.value='';
   if(newChildSubjects) renderSubjectPicker(newChildSubjects, new Set());
-
-  // Lista befintliga barn
   renderChildrenList();
 
-  // Wire modal (once) using button texts OR IDs
   if(!modalWired){
     modalWired=true;
     modalBackdrop.addEventListener('click', (e)=>{
-      const btn = e.target.closest('button');
-      if(!btn) return;
-      const txt = (btn.textContent||'').trim().toLowerCase();
-      const id = btn.id||'';
-      if(id==='save-new-child' || /lägg till barn|lägg till|spara och stäng/.test(txt)){
-        e.preventDefault(); addNewChild(); return;
-      }
-      if(id==='close-modal' || /^stäng$/.test(txt)){
-        e.preventDefault(); closeModal(); return;
-      }
-      if(id==='cancel-modal' || /^avbryt$/.test(txt)){
-        e.preventDefault(); // revert snapshot if any
-        closeModal(true); return;
-      }
+      const btn=e.target.closest('button'); if(!btn) return;
+      const txt=(btn.textContent||'').trim().toLowerCase();
+      if(btn.id==='save-new-child' || /lägg till barn|lägg till|spara och stäng/.test(txt)){ e.preventDefault(); addNewChild(); }
+      else if(btn.id==='close-modal' || /^stäng$/.test(txt)){ e.preventDefault(); closeModal(); }
+      else if(btn.id==='cancel-modal' || /^avbryt$/.test(txt)){ e.preventDefault(); closeModal(true); }
     }, {passive:false});
   }
-
   modalBackdrop.removeAttribute('hidden');
 }
 
@@ -121,7 +145,8 @@ function closeModal(isCancel){
   if(isCancel && window.modalSnapshot){ store=window.modalSnapshot; saveStore(); renderAll(); }
   if(modalBackdrop) modalBackdrop.setAttribute('hidden','');
   if(!store.currentChild && hasAnyChild()){
-    store.currentChild = Object.keys(store.children)[0]; saveStore(); renderAll();
+    store.currentChild = Object.keys(store.children)[0];
+    saveStore(); renderAll();
   }
 }
 
@@ -132,37 +157,21 @@ function renderSubjectPicker(container, selectedSet){
     const gh=document.createElement('div'); gh.className='group-header'; gh.textContent=group.title; container.appendChild(gh);
     const row=document.createElement('div'); row.className='subjects-group subject-row';
     group.items.forEach(sub=>{
-      const btn=document.createElement('button'); btn.type='button';
-      btn.className='sub-chip'+(selectedSet.has(sub)?' active':'');
+      const btn=document.createElement('button'); btn.type='button'; btn.className='sub-chip'+(selectedSet.has(sub)?' active':'');
       const icon = subjectIcons[sub] || '📘';
       btn.innerHTML = `<span class="i">${icon}</span> <span class="t">${sub}</span>`;
       row.appendChild(btn);
     });
     container.appendChild(row);
   });
-
-  // Chip toggle via delegation
-  container.addEventListener('click', function(e){
-    const b = e.target.closest('.sub-chip');
-    if(!b) return;
-    e.preventDefault();
-    b.classList.toggle('active');
-    const chosen = Array.from(container.querySelectorAll('.sub-chip.active .t')).map(t=>t.textContent.trim());
-    container._selectedSet = new Set(chosen);
-  }, {passive:false});
-
   container._selectedSet = selectedSet;
 }
 
 function renderChildrenList(){
   if(!childrenList) return;
   childrenList.innerHTML='';
-
   const names=Object.keys(store.children).sort();
-  if(names.length===0){
-    const p=document.createElement('p'); p.textContent='Inga barn tillagda ännu.'; childrenList.appendChild(p); return;
-  }
-
+  if(names.length===0){ const p=document.createElement('p'); p.textContent='Inga barn tillagda ännu.'; childrenList.appendChild(p); return; }
   names.forEach(name=>{
     const data=store.children[name];
     const box=document.createElement('div'); box.className='child-box';
@@ -172,7 +181,6 @@ function renderChildrenList(){
 
     const nameLabel=document.createElement('label'); nameLabel.className='fld-label'; nameLabel.textContent='Namn';
     const nameInput=document.createElement('input'); nameInput.type='text'; nameInput.className='fld-input'; nameInput.value=name;
-
     const subjLabel=document.createElement('div'); subjLabel.className='fld-label'; subjLabel.textContent='Aktiva ämnen';
     const subjWrap=document.createElement('div'); subjWrap.className='subjects-picker-wrap';
     const preSel=new Set(data.subjects||[]);
@@ -182,7 +190,6 @@ function renderChildrenList(){
     const saveBtn=document.createElement('button'); saveBtn.type='button'; saveBtn.className='btn'; saveBtn.textContent='Spara';
     const delBtn=document.createElement('button'); delBtn.type='button'; delBtn.className='btn'; delBtn.textContent='Ta bort';
     const closeBtn=document.createElement('button'); closeBtn.type='button'; closeBtn.className='btn'; closeBtn.textContent='Stäng';
-
     btnRow.appendChild(saveBtn); btnRow.appendChild(delBtn); btnRow.appendChild(closeBtn);
 
     panel.appendChild(nameLabel); panel.appendChild(nameInput);
@@ -230,7 +237,7 @@ function addNewChild(){
   saveStore(); renderAll(); closeModal();
 }
 
-/* ====== LIST & SUMMARY ====== */
+/* ===== LIST & SUMMARY ===== */
 function renderChildSelect(){
   if(!childSelect) return;
   childSelect.innerHTML='';
@@ -322,61 +329,7 @@ function renderList(){
   });
 }
 
-/* ====== ADD HOMEWORK ====== */
-function addHomework(){
-  if(!hasAnyChild()){ openModal(true); alert('Lägg till ett barn först.'); return; }
-  const s=state();
-  const subj=subjectSelect?subjectSelect.value:"";
-  const task=(taskInput?taskInput.value:"").trim();
-  const due=dueInput?dueInput.value:"";
-  const isExam=!!(isExamInput&&isExamInput.checked);
-  if(!due){ alert(isExam?'Ange datum för provet.':'Ange datum för läxan.'); if(dueInput) dueInput.focus(); return; }
-  const times=isExam?1:(parseInt(timesInput&&timesInput.value)||1);
-  if(!s.subjects.includes(subj)){ alert('Ämnet är inte aktivt för detta barn. Lägg till ämnet under Hantera barn.'); return; }
-  if(!task) return;
-  s.todos.push({ id:safeId(), subj, task, due, timesLeft:times, timesTotal:times, done:false, isExam, completedOn:null });
-  saveStore(); resetInputs(); toggleTimesForExam(); validateForm();
-  if(inputRow && !inputRow.hasAttribute('hidden')){ inputRow.setAttribute('hidden',''); if(addQuickBtn){ addQuickBtn.setAttribute('aria-expanded','false'); addQuickBtn.textContent='Lägg till läxa/prov'; } }
-  renderAll();
-}
-
-/* ====== EDIT MODAL (homework) ====== */
-function openEditModal(id){
-  if(!editBackdrop) return;
-  const s=state(); const t=s.todos.find(x=>x.id===id); if(!t) return;
-  if(editSubject){ editSubject.innerHTML=''; s.subjects.forEach(sub=>{ const o=document.createElement('option'); o.value=sub; o.textContent=sub; editSubject.appendChild(o); }); editSubject.value=t.subj; }
-  if(editTask) editTask.value=t.task;
-  if(editIsExam) editIsExam.checked=!!t.isExam;
-  if(editDue) editDue.value=t.due||'';
-  if(editTimes) editTimes.value=t.timesTotal||Math.max(1,t.timesLeft||1);
-  toggleEditTimesForExam(); editBackdrop.removeAttribute('hidden');
-}
-function toggleEditTimesForExam(){
-  const isExam=!!(editIsExam&&editIsExam.checked);
-  if(!editTimes) return;
-  if(isExam){ editTimes.value=''; editTimes.placeholder='–'; editTimes.disabled=true; }
-  else { editTimes.disabled=false; editTimes.placeholder=''; if(!editTimes.value) editTimes.value=1; }
-}
-function closeEditModal(){ if(editBackdrop) editBackdrop.setAttribute('hidden',''); }
-function saveEditChanges(){
-  const s=state(); const id=(window._editId)||null;
-  // kept minimal; not focus of this patch
-}
-
-/* ====== FILTER ====== */
-function wireFilterChips(){
-  const chips=document.querySelectorAll('.chip[data-filter]');
-  chips.forEach(ch=>{
-    ch.addEventListener('click', ()=>{
-      const f=ch.getAttribute('data-filter')||'active';
-      const s=state(); s.filter=f; s.focusedSubject='';
-      document.querySelectorAll('.chip[data-filter]').forEach(x=>x.classList.remove('active'));
-      ch.classList.add('active'); renderAll();
-    });
-  });
-}
-
-/* ====== HELPERS ====== */
+/* ===== HELPERS ===== */
 function todayLocalISO(){ const d=new Date(); const y=d.getFullYear(); const m=String(d.getMonth()+1).padStart(2,'0'); const dd=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${dd}`; }
 function isoToDate(iso){ return new Date(iso+'T00:00:00'); }
 const MS_DAY=24*60*60*1000; function daysDiff(a,b){ const a0=new Date(a.getFullYear(),a.getMonth(),a.getDate()); const b0=new Date(b.getFullYear(),b.getMonth(),b.getDate()); return Math.floor((a0-b0)/MS_DAY); }
@@ -402,13 +355,9 @@ function migrateStore(){
       if(t.done&&!t.completedOn){ t.completedOn=null; }
     }); });
     store=parsed; localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
-  }catch{}
+  }catch(e){ showDebug('migrate err'); }
 }
-function saveStore(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(store)); }catch{} }
+function saveStore(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(store)); }catch(e){ showDebug('save err'); } }
 function loadStore(){ try{ const raw=localStorage.getItem(STORAGE_KEY); if(!raw) return { currentChild:'', children:{} }; const parsed=JSON.parse(raw); if(!parsed.children) parsed.children={}; return parsed; }catch{ return { currentChild:'', children:{} }; }
 function safeId(){ return 'id-'+Math.random().toString(36).slice(2,10); }
-
-function renderAll(){
-  renderChildSelect(); renderSubjectOptions(); renderSummary(); renderList(); renderChildrenList();
-}
 })();
