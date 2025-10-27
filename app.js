@@ -1,22 +1,6 @@
 (function(){
 'use strict';
 
-/* ===== DEBUG ===== */
-window.addEventListener('error', (e)=>{
-  console.error('[LK] Uncaught:', e.error||e.message||e);
-  showDebug('Error: '+(e.message||'unknown'));
-});
-window.addEventListener('unhandledrejection', (e)=>{
-  console.error('[LK] Rejection:', e.reason);
-  showDebug('Promise: '+(e.reason&&e.reason.message||e.reason||'unknown'));
-});
-function showDebug(msg){
-  try{
-    const el=document.getElementById('dbg'); if(!el) return;
-    el.textContent='DEBUG: '+msg; el.hidden=false;
-  }catch(_){}
-}
-
 /* ===== DATA ===== */
 const SUBJECT_GROUPS=[
   {title:"Språk",items:["Franska","Engelska","Spanska","Svenska","Italienska","Tyska"]},
@@ -29,21 +13,24 @@ const SUBJECT_GROUPS=[
 const subjectIcons={"Franska":"🇫🇷","Engelska":"🇬🇧","Spanska":"🇪🇸","Svenska":"🇸🇪","Italienska":"🇮🇹","Tyska":"🇩🇪","Biologi":"🧬","Fysik":"⚛️","Kemi":"⚗️","Naturkunskap":"🌿","NO":"🔬","Geografi":"🗺️","Historia":"📜","Samhällskunskap":"🏛️","Religion":"⛪","SO":"🌍","Musik":"🎵","Bild":"🎨","Idrott & Hälsa":"🏃‍♂️","Hemkunskap":"🍳","Matte":"➗","Teknik":"⚙️","Juridik":"⚖️","Företagsekonomi":"💼","Psykologi":"🧠","Filosofi":"🤔"};
 const ALL_SUBJECTS=SUBJECT_GROUPS.flatMap(g=>g.items);
 
+/* ===== STATE ===== */
 const STORAGE_KEY="läxkollen-multi-children-v1";
 let store=loadStore(); if(!store.children) store.children={};
-let modalWired=false;
-
 const $=id=>document.getElementById(id);
-let childSelect,subjectSelect,taskInput,dueInput,timesInput,isExamInput,addBtn,addQuickBtn,inputRow,subjectSummary,listEl,historyNotice;
-let modalBackdrop,manageBtn,childrenList,newChildName,newChildSubjects,closeModalBtn,cancelModalBtn,onboardingNote;
-let editBackdrop,editSubject,editTask,editIsExam,editDue,editTimes,editCancel,editSave;
+const on=(el,ev,fn)=>{ if(el&&el.addEventListener) el.addEventListener(ev,fn,{passive:false}); };
 
+let childSelect,subjectSelect,taskInput,dueInput,timesInput,isExamInput,addBtn,addQuickBtn,inputRow,subjectSummary,listEl,historyNotice;
+let modalBackdrop,manageBtn,childrenList,newChildName,newChildSubjects,saveNewChildBtn,closeModalBtn,cancelModalBtn,onboardingNote;
+let editBackdrop,editSubject,editTask,editIsExam,editDue,editTimes,editCancel,editSave;
+let editingId=null;
+
+/* ===== BOOT ===== */
 document.addEventListener('DOMContentLoaded', ()=>{
   try{
     bindDom();
     init();
     if(!hasAnyChild()) openModal(true);
-  }catch(e){ showDebug('init failed'); console.error(e); }
+  }catch(e){ console.error(e); }
 });
 
 function bindDom(){
@@ -51,8 +38,8 @@ function bindDom(){
   timesInput=$('times'); isExamInput=$('is-exam'); addBtn=$('add'); addQuickBtn=$('add-quick');
   inputRow=$('input-row'); subjectSummary=$('subject-summary'); listEl=$('list'); historyNotice=$('history-notice');
   modalBackdrop=$('modal-backdrop'); manageBtn=$('manage-children'); childrenList=$('children-list');
-  newChildName=$('new-child-name'); newChildSubjects=$('new-child-subjects'); closeModalBtn=$('close-modal');
-  cancelModalBtn=$('cancel-modal'); onboardingNote=$('onboarding-note');
+  newChildName=$('new-child-name'); newChildSubjects=$('new-child-subjects'); saveNewChildBtn=$('save-new-child');
+  closeModalBtn=$('close-modal'); cancelModalBtn=$('cancel-modal'); onboardingNote=$('onboarding-note');
   editBackdrop=$('edit-backdrop'); editSubject=$('edit-subject'); editTask=$('edit-task');
   editIsExam=$('edit-is-exam'); editDue=$('edit-due'); editTimes=$('edit-times'); editCancel=$('edit-cancel'); editSave=$('edit-save');
 }
@@ -72,21 +59,22 @@ function init(){
   on(editSave,'click', saveEditChanges);
 
   on(manageBtn,'click', ()=>openModal(false));
+  on(closeModalBtn,'click', ()=>{ if(hasAnyChild()) closeModal(); });
+  on(cancelModalBtn,'click', ()=> closeModal(true));
+  on(saveNewChildBtn,'click', addNewChild);
 
-  // Global delegation fallbacks
-  document.body.addEventListener('click', (e)=>{
-    const b=e.target.closest('button');
-    if(!b) return;
-    const txt=(b.textContent||'').trim().toLowerCase();
-    if(/hantera barn/.test(txt)){ e.preventDefault(); openModal(false); return; }
-    if(modalBackdrop && !modalBackdrop.hasAttribute('hidden')){
-      if(/lägg till barn|lägg till|spara och stäng/.test(txt)){ e.preventDefault(); addNewChild(); return; }
-      if(/^stäng$/.test(txt)){ e.preventDefault(); closeModal(); return; }
-      if(/^avbryt$/.test(txt)){ e.preventDefault(); closeModal(true); return; }
-    }
-  }, {passive:false});
+  // Delegation for modal buttons by label (if IDs differ)
+  if(modalBackdrop){
+    modalBackdrop.addEventListener('click', (e)=>{
+      const b=e.target.closest('button'); if(!b) return;
+      const txt=(b.textContent||'').trim().toLowerCase();
+      if(b.id==='save-new-child' || /lägg till barn|lägg till|spara och stäng/.test(txt)){ e.preventDefault(); addNewChild(); }
+      else if(b.id==='close-modal' || /^stäng$/.test(txt)){ e.preventDefault(); closeModal(); }
+      else if(b.id==='cancel-modal' || /^avbryt$/.test(txt)){ e.preventDefault(); closeModal(true); }
+    }, {passive:false});
+  }
 
-  // Subject chip delegation in whole doc
+  // Chip toggle in modal + edit panels
   document.body.addEventListener('click', (e)=>{
     const chip=e.target.closest('.sub-chip');
     if(!chip) return;
@@ -99,79 +87,46 @@ function init(){
     }
   }, {passive:false});
 
-  wireFilterChips();
   migrateStore();
   renderAll();
   toggleTimesForExam(); validateForm();
 }
 
-function on(el,ev,fn){ if(el&&el.addEventListener) el.addEventListener(ev,fn,{passive:false}); }
-
-/* ===== STATE ===== */
+/* ===== CHILDREN ===== */
 function hasAnyChild(){ return store.children && Object.keys(store.children).length>0; }
-function state(){
-  const name=store.currentChild;
-  if(!name||!store.children||!store.children[name]) return {subjects:[],todos:[],filter:"active",focusedSubject:""};
-  const s=store.children[name];
-  if(!('filter' in s)) s.filter='active';
-  if(!('focusedSubject' in s)) s.focusedSubject='';
-  if(!('todos' in s)) s.todos=[];
-  if(!('subjects' in s)) s.subjects=[];
-  return s;
-}
-
-/* ===== MODAL ===== */
 function openModal(isOnboarding){
   if(!modalBackdrop) return;
   if(onboardingNote) onboardingNote.style.display = isOnboarding ? 'block' : 'none';
   if(newChildName) newChildName.value='';
   if(newChildSubjects) renderSubjectPicker(newChildSubjects, new Set());
   renderChildrenList();
-
-  if(!modalWired){
-    modalWired=true;
-    modalBackdrop.addEventListener('click', (e)=>{
-      const btn=e.target.closest('button'); if(!btn) return;
-      const txt=(btn.textContent||'').trim().toLowerCase();
-      if(btn.id==='save-new-child' || /lägg till barn|lägg till|spara och stäng/.test(txt)){ e.preventDefault(); addNewChild(); }
-      else if(btn.id==='close-modal' || /^stäng$/.test(txt)){ e.preventDefault(); closeModal(); }
-      else if(btn.id==='cancel-modal' || /^avbryt$/.test(txt)){ e.preventDefault(); closeModal(true); }
-    }, {passive:false});
-  }
   modalBackdrop.removeAttribute('hidden');
 }
-
 function closeModal(isCancel){
-  if(isCancel && window.modalSnapshot){ store=window.modalSnapshot; saveStore(); renderAll(); }
   if(modalBackdrop) modalBackdrop.setAttribute('hidden','');
   if(!store.currentChild && hasAnyChild()){
     store.currentChild = Object.keys(store.children)[0];
     saveStore(); renderAll();
   }
 }
-
-function renderSubjectPicker(container, selectedSet){
-  if(!container) return;
-  container.innerHTML='';
-  SUBJECT_GROUPS.forEach(group=>{
-    const gh=document.createElement('div'); gh.className='group-header'; gh.textContent=group.title; container.appendChild(gh);
-    const row=document.createElement('div'); row.className='subjects-group subject-row';
-    group.items.forEach(sub=>{
-      const btn=document.createElement('button'); btn.type='button'; btn.className='sub-chip'+(selectedSet.has(sub)?' active':'');
-      const icon = subjectIcons[sub] || '📘';
-      btn.innerHTML = `<span class="i">${icon}</span> <span class="t">${sub}</span>`;
-      row.appendChild(btn);
-    });
-    container.appendChild(row);
-  });
-  container._selectedSet = selectedSet;
+function addNewChild(){
+  const name=(newChildName&&newChildName.value||'').trim();
+  const chosen=newChildSubjects? Array.from(newChildSubjects.querySelectorAll('.sub-chip.active .t')).map(t=>t.textContent.trim()) : [];
+  if(!name){ alert('Ange barnets namn.'); if(newChildName) newChildName.focus(); return; }
+  if(chosen.length===0){ alert('Välj minst ett ämne.'); return; }
+  if(!store.children) store.children={};
+  if(store.children[name]){ alert('Det finns redan ett barn med det namnet.'); return; }
+  store.children[name]={ subjects: chosen, todos: [], filter:'active', focusedSubject:'' };
+  store.currentChild=name;
+  saveStore(); renderAll(); closeModal();
 }
-
 function renderChildrenList(){
   if(!childrenList) return;
   childrenList.innerHTML='';
   const names=Object.keys(store.children).sort();
-  if(names.length===0){ const p=document.createElement('p'); p.textContent='Inga barn tillagda ännu.'; childrenList.appendChild(p); return; }
+  if(names.length===0){
+    const p=document.createElement('p'); p.textContent='Inga barn tillagda ännu.'; childrenList.appendChild(p); return;
+  }
   names.forEach(name=>{
     const data=store.children[name];
     const box=document.createElement('div'); box.className='child-box';
@@ -181,6 +136,7 @@ function renderChildrenList(){
 
     const nameLabel=document.createElement('label'); nameLabel.className='fld-label'; nameLabel.textContent='Namn';
     const nameInput=document.createElement('input'); nameInput.type='text'; nameInput.className='fld-input'; nameInput.value=name;
+
     const subjLabel=document.createElement('div'); subjLabel.className='fld-label'; subjLabel.textContent='Aktiva ämnen';
     const subjWrap=document.createElement('div'); subjWrap.className='subjects-picker-wrap';
     const preSel=new Set(data.subjects||[]);
@@ -224,32 +180,99 @@ function renderChildrenList(){
     closeBtn.addEventListener('click', ()=> panel.classList.add('hidden'));
   });
 }
+function renderSubjectPicker(container, selectedSet){
+  if(!container) return;
+  container.innerHTML='';
+  SUBJECT_GROUPS.forEach(group=>{
+    const gh=document.createElement('div'); gh.className='group-header'; gh.textContent=group.title; container.appendChild(gh);
+    const row=document.createElement('div'); row.className='subjects-group subject-row';
+    group.items.forEach(sub=>{
+      const btn=document.createElement('button'); btn.type='button'; btn.className='sub-chip'+(selectedSet.has(sub)?' active':'');
+      const icon = subjectIcons[sub] || '📘';
+      btn.innerHTML = `<span class="i">${icon}</span> <span class="t">${sub}</span>`;
+      row.appendChild(btn);
+    });
+    container.appendChild(row);
+  });
+  container._selectedSet = selectedSet;
+}
 
-function addNewChild(){
-  const name=(newChildName&&newChildName.value||'').trim();
-  const chosen=newChildSubjects? Array.from(newChildSubjects.querySelectorAll('.sub-chip.active .t')).map(t=>t.textContent.trim()) : [];
-  if(!name){ alert('Ange barnets namn.'); if(newChildName) newChildName.focus(); return; }
-  if(chosen.length===0){ alert('Välj minst ett ämne.'); return; }
-  if(!store.children) store.children={};
-  if(store.children[name]){ alert('Det finns redan ett barn med det namnet.'); return; }
-  store.children[name]={ subjects: chosen, todos: [], filter:'active', focusedSubject:'' };
-  store.currentChild=name;
-  saveStore(); renderAll(); closeModal();
+/* ===== HOMEWORK ===== */
+function addHomework(){
+  if(!hasAnyChild()){ openModal(true); alert('Lägg till ett barn först.'); return; }
+  const s=state();
+  const subj=subjectSelect?subjectSelect.value:"";
+  const task=(taskInput?taskInput.value:"").trim();
+  const due=dueInput?dueInput.value:"";
+  const isExam=!!(isExamInput&&isExamInput.checked);
+  if(!due){ alert(isExam?'Ange datum för provet.':'Ange datum för läxan.'); if(dueInput) dueInput.focus(); return; }
+  const times=isExam?1:(parseInt(timesInput&&timesInput.value)||1);
+  if(!s.subjects.includes(subj)){ alert('Ämnet är inte aktivt för detta barn. Lägg till ämnet under Hantera barn.'); return; }
+  if(!task) return;
+  s.todos.push({ id:safeId(), subj, task, due, timesLeft:times, timesTotal:times, done:false, isExam, completedOn:null });
+  saveStore(); resetInputs(); toggleTimesForExam(); validateForm();
+  if(inputRow && !inputRow.hasAttribute('hidden')){ inputRow.setAttribute('hidden',''); if(addQuickBtn){ addQuickBtn.setAttribute('aria-expanded','false'); addQuickBtn.textContent='Lägg till läxa/prov'; } }
+  renderAll();
+}
+function toggleInputRow(){
+  if(!inputRow||!addQuickBtn) return;
+  const isHidden=inputRow.hasAttribute('hidden');
+  if(isHidden){
+    inputRow.removeAttribute('hidden');
+    addQuickBtn.setAttribute('aria-expanded','true');
+    addQuickBtn.textContent='Stäng';
+    setTimeout(()=> taskInput&&taskInput.focus(), 0);
+  } else {
+    abortInput();
+  }
+}
+function abortInput(){
+  resetInputs(); toggleTimesForExam(); validateForm();
+  if(inputRow) inputRow.setAttribute('hidden','');
+  if(addQuickBtn){ addQuickBtn.setAttribute('aria-expanded','false'); addQuickBtn.textContent='Lägg till läxa/prov'; }
+}
+function toggleTimesForExam(){
+  if(!timesInput||!isExamInput) return;
+  const isExam=!!isExamInput.checked;
+  if(isExam){ timesInput.value=''; timesInput.placeholder='–'; timesInput.disabled=true; }
+  else { timesInput.disabled=false; timesInput.placeholder=''; if(!timesInput.value) timesInput.value=1; }
+}
+function validateForm(){
+  if(!addBtn||!subjectSelect||!taskInput||!dueInput) return;
+  const ok=!!subjectSelect.value && taskInput.value.trim().length>0 && !!dueInput.value;
+  addBtn.disabled=!ok; addBtn.setAttribute('aria-disabled', String(!ok));
 }
 
 /* ===== LIST & SUMMARY ===== */
+function state(){
+  const name=store.currentChild;
+  if(!name||!store.children||!store.children[name]) return {subjects:[],todos:[],filter:"active",focusedSubject:""};
+  const s=store.children[name];
+  if(!('filter' in s)) s.filter='active';
+  if(!('focusedSubject' in s)) s.focusedSubject='';
+  if(!('todos' in s)) s.todos=[];
+  if(!('subjects' in s)) s.subjects=[];
+  return s;
+}
+function renderAll(){
+  finalizeExamsByDate();
+  renderChildSelect();
+  renderSubjectOptions();
+  renderSummary();
+  renderList();
+  renderChildrenList();
+}
 function renderChildSelect(){
   if(!childSelect) return;
   childSelect.innerHTML='';
   if(!hasAnyChild()){ childSelect.value=''; return; }
-  Object.keys(store.children).sort().forEach(n=>{
-    const o=document.createElement('option'); o.value=n; o.textContent=n; childSelect.appendChild(o);
+  Object.keys(store.children).sort().forEach(name=>{
+    const o=document.createElement('option'); o.value=name; o.textContent=name; childSelect.appendChild(o);
   });
   if(!store.currentChild) store.currentChild=Object.keys(store.children)[0]||'';
   childSelect.value=store.currentChild||'';
   childSelect.onchange=()=>{ store.currentChild=childSelect.value; if(!store.currentChild) return; state().filter='active'; state().focusedSubject=''; saveStore(); renderAll(); };
 }
-
 function renderSubjectOptions(){
   if(!subjectSelect) return;
   const s=state(); subjectSelect.innerHTML='';
@@ -261,7 +284,6 @@ function renderSubjectOptions(){
     });
   }
 }
-
 function renderSummary(){
   if(!subjectSummary) return;
   const s=state(); const focused=s.focusedSubject||''; subjectSummary.innerHTML='';
@@ -276,7 +298,6 @@ function renderSummary(){
     subjectSummary.appendChild(btn);
   });
 }
-
 function renderList(){
   if(!listEl||!historyNotice) return;
   const s=state(); listEl.innerHTML='';
@@ -329,22 +350,17 @@ function renderList(){
   });
 }
 
+/* ===== EDIT HOMEWORK (placeholder minimal) ===== */
+function openEditModal(id){ if(editBackdrop) editBackdrop.removeAttribute('hidden'); }
+function toggleEditTimesForExam(){ if(!editTimes||!editIsExam) return; const isExam=!!editIsExam.checked; editTimes.disabled=isExam; if(isExam){ editTimes.value=''; editTimes.placeholder='–'; } else { editTimes.placeholder=''; if(!editTimes.value) editTimes.value=1; } }
+function closeEditModal(){ if(editBackdrop) editBackdrop.setAttribute('hidden',''); }
+function saveEditChanges(){ closeEditModal(); } // kept minimal for now
+
 /* ===== HELPERS ===== */
 function todayLocalISO(){ const d=new Date(); const y=d.getFullYear(); const m=String(d.getMonth()+1).padStart(2,'0'); const dd=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${dd}`; }
 function isoToDate(iso){ return new Date(iso+'T00:00:00'); }
 const MS_DAY=24*60*60*1000; function daysDiff(a,b){ const a0=new Date(a.getFullYear(),a.getMonth(),a.getDate()); const b0=new Date(b.getFullYear(),b.getMonth(),b.getDate()); return Math.floor((a0-b0)/MS_DAY); }
 function formatDate(d){ try{ const [y,m,dd]=d.split('-'); return `${dd}/${m}/${y}`; } catch { return d; } }
-function toggleTimesForExam(){
-  if(!timesInput||!isExamInput) return;
-  const isExam=!!isExamInput.checked;
-  if(isExam){ timesInput.value=''; timesInput.placeholder='–'; timesInput.disabled=true; }
-  else { timesInput.disabled=false; timesInput.placeholder=''; if(!timesInput.value) timesInput.value=1; }
-}
-function validateForm(){
-  if(!addBtn||!subjectSelect||!taskInput||!dueInput) return;
-  const ok=!!subjectSelect.value && taskInput.value.trim().length>0 && !!dueInput.value;
-  addBtn.disabled=!ok; addBtn.setAttribute('aria-disabled', String(!ok));
-}
 function migrateStore(){
   try{ const raw=localStorage.getItem(STORAGE_KEY); if(!raw) return;
     const parsed=JSON.parse(raw); if(!parsed.children) return;
@@ -355,9 +371,16 @@ function migrateStore(){
       if(t.done&&!t.completedOn){ t.completedOn=null; }
     }); });
     store=parsed; localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
-  }catch(e){ showDebug('migrate err'); }
+  }catch{}
 }
-function saveStore(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(store)); }catch(e){ showDebug('save err'); } }
+function saveStore(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(store)); }catch{} }
 function loadStore(){ try{ const raw=localStorage.getItem(STORAGE_KEY); if(!raw) return { currentChild:'', children:{} }; const parsed=JSON.parse(raw); if(!parsed.children) parsed.children={}; return parsed; }catch{ return { currentChild:'', children:{} }; }
 function safeId(){ return 'id-'+Math.random().toString(36).slice(2,10); }
+function resetInputs(){ if(taskInput) taskInput.value=''; if(dueInput) dueInput.value=''; if(timesInput) timesInput.value=1; if(isExamInput) isExamInput.checked=false; }
+function finalizeExamsByDate(){
+  const s=state(); if(!s.todos) return;
+  const today=todayLocalISO(); let changed=false;
+  s.todos.forEach(t=>{ if(t.isExam && t.due && t.due<today && !t.done){ t.done=true; t.completedOn=t.due; changed=true; } });
+  if(changed) saveStore();
+}
 })();

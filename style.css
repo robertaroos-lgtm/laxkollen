@@ -1,7 +1,6 @@
 
 :root{--safe-bottom:env(safe-area-inset-bottom);--safe-top:env(safe-area-inset-top);}
 html,body{margin:0;padding:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;font-size:16px;max-width:100%;overflow-x:hidden;background:#fafafa;color:#111827;}
-.debug-ribbon{position:fixed;top:8px;right:8px;background:#ef4444;color:#fff;padding:6px 10px;border-radius:8px;z-index:1000;font-weight:700;}
 .app{padding:12px 12px calc(16px + var(--safe-bottom));}
 .topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;}
 .toolbar{display:flex;gap:8px;align-items:center;}
@@ -30,6 +29,7 @@ select,input[type=date],input[type=text],input[type=number]{border:1px solid #e5
 .exam-badge{display:inline-block;background:#fde68a;border:1px solid #f59e0b;border-radius:8px;padding:2px 6px;font-weight:700;font-size:12px;}
 .notice{color:#6b7280;font-size:12px;padding:6px 0 4px;}
 
+/* Modal */
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.25);display:flex;align-items:flex-end;z-index:50;}
 .modal[hidden]{display:none;}
 .modal .modal-content{width:100%;max-height:92vh;background:#fff;border-top-left-radius:18px;border-top-right-radius:18px;padding:12px 14px;overflow:auto;max-width:100%;}
@@ -39,6 +39,7 @@ select,input[type=date],input[type=text],input[type=number]{border:1px solid #e5
 .fld-input{width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:16px;}
 .btn-row{display:flex;gap:8px;margin-top:10px;}
 
+/* Subjects picker */
 .group-header{width:100%;font-weight:700;color:#6b7280;margin:10px 0 6px;}
 .subjects-picker-wrap{width:100%;max-width:100%;overflow-x:hidden;}
 .subjects-group{display:flex;flex-wrap:wrap;gap:8px 10px;margin:6px 0 10px 0;}
@@ -46,6 +47,7 @@ select,input[type=date],input[type=text],input[type=number]{border:1px solid #e5
 .sub-chip .i{display:inline-block;}
 .sub-chip.active{background:#ede9fe;border-color:#6366f1;color:#3730a3;font-weight:700;box-shadow:inset 0 0 0 2px rgba(99,102,241,.15);}
 
+/* Children list */
 .child-box{border:1px solid #eee;border-radius:12px;margin:8px 0;overflow:hidden;}
 .child-row{width:100%;text-align:left;background:#fafafa;border:0;padding:10px 12px;display:flex;align-items:center;justify-content:space-between;font-weight:600;font-size:15px;}
 .child-row:active{background:#f0f0f0;}
