@@ -9,29 +9,50 @@
   <link rel="apple-touch-icon" href="icons/icon-192-LK.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192-LK.png">
   <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512-LK.png">
-  <link rel="stylesheet" href="style.css?v=13.6.1">
+  <link rel="stylesheet" href="style.css?v=13.6.2">
   <style>#lk-banner{position:fixed;top:0;left:0;right:0;background:#22c55e;color:#fff;text-align:center;padding:8px 12px;font-weight:800;z-index:9999;display:none}</style>
   <script>
-  (async function(){
-    try{
-      if (new URLSearchParams(location.search).get('forceclear') === '1') {
-        if ('serviceWorker' in navigator) {
-          const regs = await navigator.serviceWorker.getRegistrations();
-          for (const r of regs) await r.unregister();
-        }
-        if ('caches' in window) {
-          const keys = await caches.keys();
-          for (const k of keys) await caches.delete(k);
-        }
-        localStorage.setItem('lk_forceclear_time', String(Date.now()));
-        alert('Cache och Service Worker rensade. Laddar om…');
-        location.replace(location.origin + location.pathname);
-      }
-    } catch (e) { console.warn(e); }
-  })();
-  window.addEventListener('error', e => { var b=document.getElementById('lk-banner'); if(b){ b.style.display='block'; b.textContent='Fel: '+(e.message||e); } });
-  window.addEventListener('unhandledrejection', e => { var b=document.getElementById('lk-banner'); if(b){ b.style.display='block'; b.textContent='Fel (promise): '+(e.reason&&e.reason.message||e.reason); } });
-  </script>
+;(function(){
+  function clearAll(){
+    var actions=[];
+    if('serviceWorker' in navigator){
+      actions.push(
+        navigator.serviceWorker.getRegistrations().then(function(regs){
+          return Promise.all(regs.map(function(r){ return r.unregister(); }));
+        })
+      );
+    }
+    if('caches' in window){
+      actions.push(
+        caches.keys().then(function(keys){
+          return Promise.all(keys.map(function(k){ return caches.delete(k); }));
+        })
+      );
+    }
+    Promise.all(actions).then(function(){
+      try{ localStorage.setItem('lk_forceclear_time', String(Date.now())); }catch(e){}
+      alert('Cache och Service Worker rensade. Laddar om…');
+      location.replace(location.origin + location.pathname);
+    });
+  }
+  try{
+    var params = new URLSearchParams(location.search || '');
+    if(params.get('forceclear') === '1'){ clearAll(); }
+  }catch(e){ console.log(e); }
+})();
+
+// Enkel felbanner (visas bara om fel uppstår)
+window.addEventListener('error', function(e){
+  var b=document.getElementById('lk-banner');
+  if(b){ b.style.display='block'; b.textContent='Fel: ' + (e.message||e); }
+});
+window.addEventListener('unhandledrejection', function(e){
+  var b=document.getElementById('lk-banner');
+  var msg = e && e.reason ? (e.reason.message || String(e.reason)) : 'Okänt fel';
+  if(b){ b.style.display='block'; b.textContent='Fel (promise): ' + msg; }
+});
+</script>
+
 </head>
 <body>
 <div id="lk-banner">LK 13.6.1</div>
@@ -124,7 +145,7 @@
 
 <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
-<script src="app.js?v=13.6.1" defer></script>
+<script src="app.js?v=13.6.2" defer></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function(){ navigator.serviceWorker.register('./sw.js').catch(console.error); });
