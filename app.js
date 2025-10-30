@@ -1,7 +1,7 @@
 (function(){
 'use strict';
+const log=(...a)=>{ try{console.log('[LK]',...a);}catch{} };
 
-/* ===== DATA ===== */
 const SUBJECT_GROUPS=[
   {title:"Språk",items:["Franska","Engelska","Spanska","Svenska","Italienska","Tyska"]},
   {title:"NO",items:["Biologi","Fysik","Kemi","Naturkunskap","NO"]},
@@ -13,7 +13,6 @@ const SUBJECT_GROUPS=[
 const subjectIcons={"Franska":"🇫🇷","Engelska":"🇬🇧","Spanska":"🇪🇸","Svenska":"🇸🇪","Italienska":"🇮🇹","Tyska":"🇩🇪","Biologi":"🧬","Fysik":"⚛️","Kemi":"⚗️","Naturkunskap":"🌿","NO":"🔬","Geografi":"🗺️","Historia":"📜","Samhällskunskap":"🏛️","Religion":"⛪","SO":"🌍","Musik":"🎵","Bild":"🎨","Idrott & Hälsa":"🏃‍♂️","Hemkunskap":"🍳","Matte":"➗","Teknik":"⚙️","Juridik":"⚖️","Företagsekonomi":"💼","Psykologi":"🧠","Filosofi":"🤔"};
 const ALL_SUBJECTS=SUBJECT_GROUPS.flatMap(g=>g.items);
 
-/* ===== STATE ===== */
 const STORAGE_KEY="läxkollen-multi-children-v1";
 let store=loadStore(); if(!store.children) store.children={};
 const $=id=>document.getElementById(id);
@@ -22,16 +21,17 @@ const on=(el,ev,fn)=>{ if(el&&el.addEventListener) el.addEventListener(ev,fn,{pa
 let childSelect,subjectSelect,taskInput,dueInput,timesInput,isExamInput,addBtn,addQuickBtn,inputRow,subjectSummary,listEl,historyNotice;
 let modalBackdrop,manageBtn,childrenList,newChildName,newChildSubjects,saveNewChildBtn,closeModalBtn,cancelModalBtn,onboardingNote;
 let editBackdrop,editSubject,editTask,editIsExam,editDue,editTimes,editCancel,editSave;
-let editingId=null;
 
-/* ===== BOOT ===== */
-document.addEventListener('DOMContentLoaded', ()=>{
+function boot(){
   try{
-    bindDom();
-    init();
-    if(!hasAnyChild()) openModal(true);
-  }catch(e){ console.error(e); }
-});
+    bindDom(); init();
+    if(!hasAnyChild()){ openModal(true); }
+  }catch(e){ banner('Init-fel: '+(e.message||e)); console.error(e); }
+}
+document.addEventListener('DOMContentLoaded', boot);
+window.addEventListener('load', ()=>{ if(!document.body._lkBooted){ document.body._lkBooted=true; boot(); } });
+
+function banner(t){ var b=$('lk-banner'); if(b){ b.style.display='block'; b.textContent=t; } }
 
 function bindDom(){
   childSelect=$('child-select'); subjectSelect=$('subject'); taskInput=$('task'); dueInput=$('due');
@@ -63,21 +63,18 @@ function init(){
   on(cancelModalBtn,'click', ()=> closeModal(true));
   on(saveNewChildBtn,'click', addNewChild);
 
-  // Delegation for modal buttons by label (if IDs differ)
   if(modalBackdrop){
     modalBackdrop.addEventListener('click', (e)=>{
       const b=e.target.closest('button'); if(!b) return;
       const txt=(b.textContent||'').trim().toLowerCase();
-      if(b.id==='save-new-child' || /lägg till barn|lägg till|spara och stäng/.test(txt)){ e.preventDefault(); addNewChild(); }
-      else if(b.id==='close-modal' || /^stäng$/.test(txt)){ e.preventDefault(); closeModal(); }
-      else if(b.id==='cancel-modal' || /^avbryt$/.test(txt)){ e.preventDefault(); closeModal(true); }
+      if(/lägg till barn|lägg till|spara och stäng/.test(txt)){ e.preventDefault(); addNewChild(); }
+      else if(/^stäng$/.test(txt)){ e.preventDefault(); closeModal(); }
+      else if(/^avbryt$/.test(txt)){ e.preventDefault(); closeModal(true); }
     }, {passive:false});
   }
 
-  // Chip toggle in modal + edit panels
   document.body.addEventListener('click', (e)=>{
-    const chip=e.target.closest('.sub-chip');
-    if(!chip) return;
+    const chip=e.target.closest('.sub-chip'); if(!chip) return;
     e.preventDefault();
     chip.classList.toggle('active');
     const wrap=chip.closest('.subjects-picker-wrap');
@@ -92,7 +89,6 @@ function init(){
   toggleTimesForExam(); validateForm();
 }
 
-/* ===== CHILDREN ===== */
 function hasAnyChild(){ return store.children && Object.keys(store.children).length>0; }
 function openModal(isOnboarding){
   if(!modalBackdrop) return;
@@ -120,6 +116,7 @@ function addNewChild(){
   store.currentChild=name;
   saveStore(); renderAll(); closeModal();
 }
+
 function renderChildrenList(){
   if(!childrenList) return;
   childrenList.innerHTML='';
@@ -180,6 +177,7 @@ function renderChildrenList(){
     closeBtn.addEventListener('click', ()=> panel.classList.add('hidden'));
   });
 }
+
 function renderSubjectPicker(container, selectedSet){
   if(!container) return;
   container.innerHTML='';
@@ -197,7 +195,6 @@ function renderSubjectPicker(container, selectedSet){
   container._selectedSet = selectedSet;
 }
 
-/* ===== HOMEWORK ===== */
 function addHomework(){
   if(!hasAnyChild()){ openModal(true); alert('Lägg till ett barn först.'); return; }
   const s=state();
@@ -214,36 +211,7 @@ function addHomework(){
   if(inputRow && !inputRow.hasAttribute('hidden')){ inputRow.setAttribute('hidden',''); if(addQuickBtn){ addQuickBtn.setAttribute('aria-expanded','false'); addQuickBtn.textContent='Lägg till läxa/prov'; } }
   renderAll();
 }
-function toggleInputRow(){
-  if(!inputRow||!addQuickBtn) return;
-  const isHidden=inputRow.hasAttribute('hidden');
-  if(isHidden){
-    inputRow.removeAttribute('hidden');
-    addQuickBtn.setAttribute('aria-expanded','true');
-    addQuickBtn.textContent='Stäng';
-    setTimeout(()=> taskInput&&taskInput.focus(), 0);
-  } else {
-    abortInput();
-  }
-}
-function abortInput(){
-  resetInputs(); toggleTimesForExam(); validateForm();
-  if(inputRow) inputRow.setAttribute('hidden','');
-  if(addQuickBtn){ addQuickBtn.setAttribute('aria-expanded','false'); addQuickBtn.textContent='Lägg till läxa/prov'; }
-}
-function toggleTimesForExam(){
-  if(!timesInput||!isExamInput) return;
-  const isExam=!!isExamInput.checked;
-  if(isExam){ timesInput.value=''; timesInput.placeholder='–'; timesInput.disabled=true; }
-  else { timesInput.disabled=false; timesInput.placeholder=''; if(!timesInput.value) timesInput.value=1; }
-}
-function validateForm(){
-  if(!addBtn||!subjectSelect||!taskInput||!dueInput) return;
-  const ok=!!subjectSelect.value && taskInput.value.trim().length>0 && !!dueInput.value;
-  addBtn.disabled=!ok; addBtn.setAttribute('aria-disabled', String(!ok));
-}
 
-/* ===== LIST & SUMMARY ===== */
 function state(){
   const name=store.currentChild;
   if(!name||!store.children||!store.children[name]) return {subjects:[],todos:[],filter:"active",focusedSubject:""};
@@ -350,13 +318,11 @@ function renderList(){
   });
 }
 
-/* ===== EDIT HOMEWORK (placeholder minimal) ===== */
 function openEditModal(id){ if(editBackdrop) editBackdrop.removeAttribute('hidden'); }
 function toggleEditTimesForExam(){ if(!editTimes||!editIsExam) return; const isExam=!!editIsExam.checked; editTimes.disabled=isExam; if(isExam){ editTimes.value=''; editTimes.placeholder='–'; } else { editTimes.placeholder=''; if(!editTimes.value) editTimes.value=1; } }
 function closeEditModal(){ if(editBackdrop) editBackdrop.setAttribute('hidden',''); }
-function saveEditChanges(){ closeEditModal(); } // kept minimal for now
+function saveEditChanges(){ closeEditModal(); }
 
-/* ===== HELPERS ===== */
 function todayLocalISO(){ const d=new Date(); const y=d.getFullYear(); const m=String(d.getMonth()+1).padStart(2,'0'); const dd=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${dd}`; }
 function isoToDate(iso){ return new Date(iso+'T00:00:00'); }
 const MS_DAY=24*60*60*1000; function daysDiff(a,b){ const a0=new Date(a.getFullYear(),a.getMonth(),a.getDate()); const b0=new Date(b.getFullYear(),b.getMonth(),b.getDate()); return Math.floor((a0-b0)/MS_DAY); }
