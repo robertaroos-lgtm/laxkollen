@@ -4,8 +4,167 @@ const log=(...a)=>{ try{console.log('[LK]',...a);}catch{} };
 
 const SUBJECT_GROUPS=[
   {title:"Språk",items:["Franska","Engelska","Spanska","Svenska","Italienska","Tyska"]},
+  {title:"NO",items:["Biologi"(function(){
+'use strict';
+function $(id){return document.getElementById(id);}
+function h(tag, attrs, ...kids){const el=document.createElement(tag); if(attrs){Object.keys(attrs).forEach(k=>{if(k==='class')el.className=attrs[k]; else if(k==='html')el.innerHTML=attrs[k]; else el.setAttribute(k, attrs[k]);});} kids.forEach(k=>{if(k==null)return; if(typeof k==='string')el.appendChild(document.createTextNode(k)); else el.appendChild(k);}); return el;}
+const STORAGE_KEY="läxkollen-multi-children-v1";
+const SUBJECT_GROUPS=[
+  {title:"Språk",items:["Franska","Engelska","Spanska","Svenska","Italienska","Tyska"]},
   {title:"NO",items:["Biologi","Fysik","Kemi","Naturkunskap","NO"]},
   {title:"SO",items:["Geografi","Historia","Samhällskunskap","Religion","SO"]},
+  {title:"Praktiskt-estetiska",items:["Musik","Bild","Idrott & Hälsa","Hemkunskap"]},
+  {title:"Övrigt",items:["Matte","Teknik"]}
+];
+const ICONS={"Franska":"🇫🇷","Engelska":"🇬🇧","Spanska":"🇪🇸","Svenska":"🇸🇪","Italienska":"🇮🇹","Tyska":"🇩🇪","Biologi":"🧬","Fysik":"⚛️","Kemi":"⚗️","Naturkunskap":"🌿","NO":"🔬","Geografi":"🗺️","Historia":"📜","Samhällskunskap":"🏛️","Religion":"⛪","SO":"🌍","Musik":"🎵","Bild":"🎨","Idrott & Hälsa":"🏃‍♂️","Hemkunskap":"🍳","Matte":"➗","Teknik":"⚙️"};
+function load(){try{const r=localStorage.getItem(STORAGE_KEY);return r?JSON.parse(r):{currentChild:'',children:{}}}catch(e){return {currentChild:'',children:{}}}}
+function save(s){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(s));}catch(e){}}
+let store=load(); if(!store.children) store.children={};
+function hasChild(){return Object.keys(store.children).length>0;}
+
+function render(){
+  const root=$('app-root'); root.innerHTML='';
+  root.appendChild(h('div',{class:'app'},
+    h('header',{class:'topbar'},
+      h('h1',null,'Läxkollen'),
+      h('div',{class:'toolbar'},
+        h('select',{id:'child-select','aria-label':'Barn'}),
+        h('button',{id:'manage-children',class:'btn small'},'Hantera barn')
+      )
+    ),
+    h('section',{class:'controls'},
+      h('button',{id:'add-quick',class:'btn'},'Lägg till läxa/prov')
+    ),
+    h('section',{class:'list-wrap'},
+      h('ul',{id:'list',class:'list'})
+    ),
+    h('div',{id:'modal-backdrop',class:'modal',hidden:''},
+      h('div',{class:'modal-content'},
+        h('header',{class:'modal-header'},
+          h('h2',null,'Hantera barn'),
+          h('p',{id:'onboarding-note',class:'onboarding-note',style:'display:none'},'Välkommen! Lägg till ditt första barn för att börja.')
+        ),
+        h('section',{class:'modal-body'},
+          h('label',{class:'fld-label',for:'new-child-name'},'Barnets namn'),
+          h('input',{id:'new-child-name',class:'fld-input',placeholder:'Barnets namn'}),
+          h('div',{class:'group-header'},'Välj ämnen'),
+          h('div',{id:'new-child-subjects',class:'subjects-picker-wrap'}),
+          h('div',{class:'btn-row',style:'margin-top:10px;'},
+            h('button',{id:'save-new-child',class:'btn'},'Lägg till'),
+            h('button',{id:'close-modal',class:'btn'},'Stäng'),
+            h('button',{id:'cancel-modal',class:'btn'},'Avbryt')
+          ),
+          h('hr',{class:'divider'}),
+          h('h3',null,'Befintliga barn'),
+          h('div',{id:'children-list'})
+        )
+      )
+    )
+  ));
+  attach();
+}
+function subjectPicker(container, selected){
+  SUBJECT_GROUPS.forEach(g=>{
+    container.appendChild(h('div',{class:'group-header'},g.title));
+    const row=h('div',{class:'subjects-group subject-row'});
+    g.items.forEach(sub=>{
+      const chip=h('button',{type:'button',class:'sub-chip'+(selected.has(sub)?' active':''),title:sub},
+        h('span',{class:'i'},ICONS[sub]||'📘'),
+        h('span',{class:'t'},sub)
+      );
+      chip.addEventListener('click',function(e){
+        e.preventDefault(); chip.classList.toggle('active');
+      },{passive:false});
+      row.appendChild(chip);
+    });
+    container.appendChild(row);
+  });
+}
+function openModal(onboarding){
+  var note=$('onboarding-note'); if(note) note.style.display=onboarding?'block':'none';
+  var name=$('new-child-name'); if(name) name.value='';
+  var wrap=$('new-child-subjects'); if(wrap){ wrap.innerHTML=''; subjectPicker(wrap,new Set()); }
+  renderChildrenList();
+  $('modal-backdrop').hidden=false;
+}
+function closeModal(){ $('modal-backdrop').hidden=true; }
+function renderChildrenList(){
+  const list=$('children-list'); if(!list) return; list.innerHTML='';
+  const names=Object.keys(store.children).sort();
+  if(names.length===0){ list.appendChild(h('p',null,'Inga barn tillagda ännu.')); return; }
+  names.forEach(name=>{
+    const c=store.children[name];
+    const box=h('div',{class:'child-box'});
+    const head=h('button',{type:'button',class:'child-row'},
+      h('span',{class:'child-name'},name),
+      h('span',{class:'child-subjects-preview'},(c.subjects||[]).join(', ')||'(Inga ämnen)')
+    );
+    const panel=h('div',{class:'child-panel hidden'});
+    const nameLabel=h('label',{class:'fld-label'},'Namn');
+    const nameInput=h('input',{type:'text',class:'fld-input',value:name});
+    const subjLabel=h('div',{class:'fld-label'},'Aktiva ämnen');
+    const subjWrap=h('div',{class:'subjects-picker-wrap'}); subjectPicker(subjWrap,new Set(c.subjects||[]));
+    const btnRow=h('div',{class:'btn-row'},
+      h('button',{class:'btn'},'Spara'),
+      h('button',{class:'btn'},'Ta bort'),
+      h('button',{class:'btn'},'Stäng')
+    );
+    panel.appendChild(nameLabel); panel.appendChild(nameInput);
+    panel.appendChild(subjLabel); panel.appendChild(subjWrap);
+    panel.appendChild(btnRow);
+    box.appendChild(head); box.appendChild(panel); list.appendChild(box);
+
+    head.addEventListener('click',()=>panel.classList.toggle('hidden'));
+    btnRow.children[0].addEventListener('click',()=>{
+      const newName=(nameInput.value||'').trim(); if(!newName){alert('Ange namn');return;}
+      const chosen=[].map.call(subjWrap.querySelectorAll('.sub-chip.active .t'),t=>t.textContent.trim());
+      if(chosen.length===0){alert('Välj minst ett ämne');return;}
+      if(newName!==name){
+        if(store.children[newName]){alert('Namnet finns redan');return;}
+        store.children[newName]=store.children[name]; delete store.children[name];
+        if(store.currentChild===name) store.currentChild=newName;
+      }
+      store.children[newName].subjects=chosen; save(store); renderChildrenList();
+    });
+    btnRow.children[1].addEventListener('click',()=>{
+      if(!confirm('Ta bort '+name+'?')) return;
+      delete store.children[name];
+      if(store.currentChild===name){ const rest=Object.keys(store.children); store.currentChild=rest[0]||''; }
+      save(store); renderChildrenList();
+      if(!hasChild()) openModal(true);
+    });
+    btnRow.children[2].addEventListener('click',()=>panel.classList.add('hidden'));
+  });
+}
+function attach(){
+  document.body.addEventListener('click',function(e){
+    const b=e.target.closest('#save-new-child,#close-modal,#cancel-modal,#manage-children');
+    if(!b) return;
+    const id=b.id;
+    if(id==='manage-children'){ openModal(false); }
+    if(id==='close-modal'||id==='cancel-modal'){ closeModal(); }
+    if(id==='save-new-child'){
+      const name=($('new-child-name').value||'').trim(); if(!name){alert('Ange barnets namn');return;}
+      const subjects=[].map.call(document.querySelectorAll('#new-child-subjects .sub-chip.active .t'),t=>t.textContent.trim());
+      if(subjects.length===0){alert('Välj minst ett ämne');return;}
+      if(!store.children) store.children={};
+      if(store.children[name]){alert('Namnet finns redan');return;}
+      store.children[name]={subjects, todos:[], filter:'active', focusedSubject:''};
+      store.currentChild=name; save(store); closeModal();
+    }
+  },{passive:false});
+  if(!hasChild()){ openModal(true); }
+}
+document.addEventListener('DOMContentLoaded', render);
+setTimeout(function(){
+  if(!document.getElementById('manage-children')){
+    var b=document.getElementById('lk-banner');
+    if(b){ b.style.display='block'; b.textContent='Laddningsfel – öppnar onboarding'; }
+    openModal(true);
+  }
+}, 1500);
+})();
+","Historia","Samhällskunskap","Religion","SO"]},
   {title:"Praktiskt-estetiska",items:["Musik","Bild","Idrott & Hälsa","Hemkunskap"]},
   {title:"Övrigt",items:["Matte","Teknik"]},
   {title:"Gymnasieämnen",items:["Juridik","Företagsekonomi","Psykologi","Filosofi"]}

@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Läxkollen – Rensa cache</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      margin: 0;
+      background: #0b1021;
+      color: #e5e7eb;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    .card {
+      max-width: 560px;
+      background: #111827;
+      border: 1px solid #374151;
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, .4);
+      text-align: center;
+    }
+    h1 { margin: 0 0 8px; font-size: 22px; }
+    p { margin: 6px 0 0; color: #a7b0c0; }
+    .ok {
+      margin-top: 12px;
+      display: inline-block;
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: #16a34a;
+      color: #fff;
+      border: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Rensar cache och Service Worker…</h1>
+    <p>Det här görs bara en gång för att låsa upp appen.</p>
+    <button class="ok" onclick="location.reload()">Visa logg igen</button>
+  </div>
+  <script>
+  (function(){
+    function clearAll(){
+      var jobs=[];
+      if('serviceWorker' in navigator){
+        jobs.push(navigator.serviceWorker.getRegistrations().then(function(regs){
+          return Promise.all(regs.map(function(r){ return r.unregister(); }));
+        }));
+      }
+      if('caches' in window){
+        jobs.push(caches.keys().then(function(keys){
+          return Promise.all(keys.map(function(k){ return caches.delete(k); }));
+        }));
+      }
+      Promise.all(jobs).then(function(){
+        try{ localStorage.setItem('lk_forceclear_time', String(Date.now())); }catch(e){}
+        location.replace(location.origin + '/laxkollen/');
+      });
+    }
+    clearAll();
+  })();
+  </script>
+</body>
+</html>

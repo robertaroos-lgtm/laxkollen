@@ -9,146 +9,66 @@
   <link rel="apple-touch-icon" href="icons/icon-192-LK.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192-LK.png">
   <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512-LK.png">
-  <link rel="stylesheet" href="style.css?v=13.6.2">
-  <style>#lk-banner{position:fixed;top:0;left:0;right:0;background:#22c55e;color:#fff;text-align:center;padding:8px 12px;font-weight:800;z-index:9999;display:none}</style>
+  <link rel="stylesheet" href="style.css?v=13.7.0">
+  <style>
+    #lk-banner {
+      position: fixed; top: 0; left: 0; right: 0;
+      background: #22c55e; color: #fff; text-align: center;
+      padding: 8px 12px; font-weight: 800; z-index: 9999; display: none;
+    }
+  </style>
   <script>
-;(function(){
-  function clearAll(){
-    var actions=[];
-    if('serviceWorker' in navigator){
-      actions.push(
-        navigator.serviceWorker.getRegistrations().then(function(regs){
+  ;(function(){
+    function clearAll(){
+      var tasks=[];
+      if('serviceWorker' in navigator){
+        tasks.push(navigator.serviceWorker.getRegistrations().then(function(regs){
           return Promise.all(regs.map(function(r){ return r.unregister(); }));
-        })
-      );
-    }
-    if('caches' in window){
-      actions.push(
-        caches.keys().then(function(keys){
+        }));
+      }
+      if('caches' in window){
+        tasks.push(caches.keys().then(function(keys){
           return Promise.all(keys.map(function(k){ return caches.delete(k); }));
-        })
-      );
+        }));
+      }
+      Promise.all(tasks).then(function(){
+        alert('Cache & SW rensade – laddar om…');
+        location.replace(location.origin + location.pathname);
+      });
     }
-    Promise.all(actions).then(function(){
-      try{ localStorage.setItem('lk_forceclear_time', String(Date.now())); }catch(e){}
-      alert('Cache och Service Worker rensade. Laddar om…');
-      location.replace(location.origin + location.pathname);
-    });
-  }
-  try{
-    var params = new URLSearchParams(location.search || '');
-    if(params.get('forceclear') === '1'){ clearAll(); }
-  }catch(e){ console.log(e); }
-})();
+    try {
+      var p = new URLSearchParams(location.search||'');
+      if(p.get('forceclear')==='1'){ clearAll(); }
+    } catch(e){}
+  })();
 
-// Enkel felbanner (visas bara om fel uppstår)
-window.addEventListener('error', function(e){
-  var b=document.getElementById('lk-banner');
-  if(b){ b.style.display='block'; b.textContent='Fel: ' + (e.message||e); }
-});
-window.addEventListener('unhandledrejection', function(e){
-  var b=document.getElementById('lk-banner');
-  var msg = e && e.reason ? (e.reason.message || String(e.reason)) : 'Okänt fel';
-  if(b){ b.style.display='block'; b.textContent='Fel (promise): ' + msg; }
-});
-</script>
-
+  window.addEventListener('error', function(e){
+    var b=document.getElementById('lk-banner');
+    if(b){ b.style.display='block'; b.textContent='Fel: '+(e.message||e); }
+  });
+  window.addEventListener('unhandledrejection', function(e){
+    var b=document.getElementById('lk-banner');
+    var msg=e&&e.reason?(e.reason.message||String(e.reason)):'Okänt fel';
+    if(b){ b.style.display='block'; b.textContent='Fel (promise): '+msg; }
+  });
+  </script>
 </head>
 <body>
-<div id="lk-banner">LK 13.6.1</div>
-<div class="app">
-  <header class="topbar">
-    <h1>Läxkollen</h1>
-    <div class="toolbar">
-      <select id="child-select" aria-label="Barn"></select>
-      <button id="manage-children" class="btn small">Hantera barn</button>
-    </div>
-  </header>
-
-  <section class="summary">
-    <div id="subject-summary" class="subject-summary"></div>
-  </section>
-
-  <section class="controls">
-    <button id="add-quick" class="btn">Lägg till läxa/prov</button>
-    <div id="input-row" class="input-row" hidden>
-      <div class="field"><label for="subject">Ämne</label><select id="subject"></select></div>
-      <div class="field"><label for="task">Läxa/Prov</label><input id="task" placeholder="Beskriv läxan eller provet"/></div>
-      <div class="field"><label for="due">Datum</label><input id="due" type="date"/></div>
-      <div class="field inline"><label for="is-exam">Prov?</label><input id="is-exam" type="checkbox"/></div>
-      <div class="field"><label for="times">Antal repetitioner</label><input id="times" type="number" min="1" value="1"/></div>
-      <div class="field" style="justify-content:flex-end;"><button id="add" class="btn" disabled aria-disabled="true">Lägg till</button></div>
-    </div>
-    <div class="row">
-      <span class="chip active" data-filter="active">Kvar att göra</span>
-      <span class="chip" data-filter="exam">Prov</span>
-      <span class="chip" data-filter="done">Historik (30 d)</span>
-    </div>
-  </section>
-
-  <section class="list-wrap">
-    <div id="history-notice" class="notice" hidden>Visar klarmarkerade senaste 30 dagarna</div>
-    <ul id="list" class="list"></ul>
-  </section>
-</div>
-
-<!-- Manage Children Modal -->
-<div id="modal-backdrop" class="modal" hidden>
-  <div class="modal-content">
-    <header class="modal-header">
-      <h2>Hantera barn</h2>
-      <p id="onboarding-note" class="onboarding-note" style="display:none">Välkommen! Lägg till ditt första barn för att börja.</p>
-    </header>
-    <section class="modal-body">
-      <label class="fld-label" for="new-child-name">Barnets namn</label>
-      <input id="new-child-name" class="fld-input" placeholder="Barnets namn"/>
-      <div class="group-header">Välj ämnen</div>
-      <div id="new-child-subjects" class="subjects-picker-wrap"></div>
-      <div class="btn-row" style="margin-top:10px;">
-        <button id="save-new-child" class="btn">Lägg till</button>
-        <button id="close-modal" class="btn">Stäng</button>
-        <button id="cancel-modal" class="btn">Avbryt</button>
-      </div>
-
-      <hr class="divider"/>
-
-      <h3>Befintliga barn</h3>
-      <div id="children-list"></div>
-    </section>
-  </div>
-</div>
-
-<!-- Edit Homework Modal -->
-<div id="edit-backdrop" class="modal" hidden>
-  <div class="modal-content">
-    <header class="modal-header"><h2>Redigera</h2></header>
-    <section class="modal-body">
-      <label class="fld-label" for="edit-subject">Ämne</label>
-      <select id="edit-subject"></select>
-      <label class="fld-label" for="edit-task">Läxa/Prov</label>
-      <input id="edit-task" class="fld-input"/>
-      <div class="field inline">
-        <label for="edit-is-exam">Prov?</label>
-        <input id="edit-is-exam" type="checkbox"/>
-      </div>
-      <label class="fld-label" for="edit-due">Datum</label>
-      <input id="edit-due" type="date"/>
-      <label class="fld-label" for="edit-times">Antal repetitioner</label>
-      <input id="edit-times" type="number" min="1" value="1"/>
-      <div class="btn-row">
-        <button id="edit-save" class="btn">Spara</button>
-        <button id="edit-cancel" class="btn">Avbryt</button>
-      </div>
-    </section>
-  </div>
-</div>
-
-<div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
-
-<script src="app.js?v=13.6.2" defer></script>
+<div id="lk-banner">LK 13.7.0</div>
+<div id="app-root"></div>
+<script src="app.js?v=13.7.0" defer></script>
 <script>
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function(){ navigator.serviceWorker.register('./sw.js').catch(console.error); });
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('./sw.js').then(function(reg){
+      navigator.serviceWorker.addEventListener('controllerchange', function(){
+        if (!window.__lk_reloaded_once) {
+          window.__lk_reloaded_once = true;
+          location.reload();
+        }
+      });
+    }).catch(function(e){ console.log(e); });
+  });
 }
 </script>
 </body>
