@@ -1,1 +1,0 @@
-Läxkollen v13.4.3 – komplett zip. Testa via http server. SW-cache: lk-v13.4.3
