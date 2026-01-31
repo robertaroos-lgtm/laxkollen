@@ -1,9 +1,11 @@
-/* Läxkollen – app.js (anpassad för din aktuella index.html)
-   - Fixar Hantera barn-flödet (listläge vs editorläge)
-   - Döljer ämnessammanfattningsraden
-   - Lägger ikon i ämnes-dropdown
-   - Glosor-checkbox visar/döljer times-row
-   - Visar mini-tutorial om swipe (EN gång vid första tillagda uppgiften)
+/* Läxkollen – app.js
+   - Hantera barn (listläge/editorläge)
+   - Ämnes-dropdown med ikoner
+   - Glosor-checkbox styr times-row
+   - PROV badge i listan
+   - Add-panel stängs efter "Lägg till"
+   - Mini-tutorial om swipe: EN gång vid första tillagda uppgift + manuell knapp i Hantera barn
+   - ALLA-läge: visa alla barns uppgifter (default), tydlig barn-badge per rad
 */
 
 const SUBJECT_GROUPS = [
@@ -26,6 +28,7 @@ const subjectIcons = {
 };
 
 const STORAGE_KEY = 'läxkollen-multi-children-v1';
+const ALL_VIEW_KEY = '__ALL__';
 
 /* ----------------------------- DOM refs ----------------------------- */
 const childSelect = document.getElementById('child-select');
@@ -62,8 +65,8 @@ const childEditor = document.getElementById('child-editor');
 const newChildName = document.getElementById('new-child-name');
 const newChildSubjects = document.getElementById('new-child-subjects');
 
-const closeModalBtn = document.getElementById('close-modal');     // "Stäng" i listläge
-const saveNewChildBtn = document.getElementById('save-new-child'); // "Spara" i editorläge
+const closeModalBtn = document.getElementById('close-modal');      // Stäng i listläge
+const saveNewChildBtn = document.getElementById('save-new-child'); // Spara i editorläge
 
 // Edit modal
 const editBackdrop = document.getElementById('edit-backdrop');
@@ -76,6 +79,7 @@ const editCancel = document.getElementById('edit-cancel');
 const editSave = document.getElementById('edit-save');
 
 let editingId = null;
+let editingChildNameForTask = null; // viktigt för ALLA-läget
 
 // Hantera barn editor-state
 let editingChildSubjectsName = null; // null = lägg till nytt barn
@@ -88,11 +92,12 @@ function hasAnyChild() {
   return store.children && Object.keys(store.children).length > 0;
 }
 
-function state() {
-  const name = store.currentChild;
-  if (!name || !store.children || !store.children[name]) {
-    return { subjects: [], todos: [], filter: 'active', focusedSubject: '' };
-  }
+function isAllView() {
+  return store.currentChild === ALL_VIEW_KEY;
+}
+
+function getChildStateByName(name) {
+  if (!name || !store.children || !store.children[name]) return null;
   const s = store.children[name];
   if (!('filter' in s)) s.filter = 'active';
   if (!('focusedSubject' in s)) s.focusedSubject = '';
@@ -101,7 +106,25 @@ function state() {
   return s;
 }
 
-/* ----------------------------- Swipe tutorial (one-time) ----------------------------- */
+function allViewState() {
+  store._allView = store._allView || { filter: 'active' };
+  if (!('filter' in store._allView)) store._allView.filter = 'active';
+  return store._allView;
+}
+
+function state() {
+  if (isAllView()) {
+    // “state” för ALLA gäller bara filter (inte subjects/todos)
+    return allViewState();
+  }
+
+  const name = store.currentChild;
+  const s = getChildStateByName(name);
+  if (!s) return { subjects: [], todos: [], filter: 'active', focusedSubject: '' };
+  return s;
+}
+
+/* ----------------------------- Swipe tutorial (one-time + manual) ----------------------------- */
 function totalTaskCountAllChildren(){
   try{
     if(!store?.children) return 0;
@@ -119,11 +142,10 @@ function markSwipeTutorialSeen(){
   saveStore();
 }
 
-function showSwipeTutorialOnce(){
-  if (hasSeenSwipeTutorial()) return;
+function showSwipeTutorial({ force = false } = {}){
+  if (!force && hasSeenSwipeTutorial()) return;
 
-  // Markera direkt så den aldrig triggas flera gånger vid refresh
-  markSwipeTutorialSeen();
+  if (!force) markSwipeTutorialSeen();
 
   const overlay = document.createElement('div');
   overlay.setAttribute('role', 'dialog');
@@ -200,23 +222,28 @@ function showSwipeTutorialOnce(){
   document.body.appendChild(overlay);
 }
 
+function showSwipeTutorialOnce(){
+  // EN gång, när första uppgiften läggs till
+  if (hasSeenSwipeTutorial()) return;
+  markSwipeTutorialSeen();
+  showSwipeTutorial({ force: true });
+}
+
 /* ----------------------------- Init ----------------------------- */
 document.addEventListener('DOMContentLoaded', () => {
-  // DÖLJ ämnes-sammanfattningen (du vill ta bort den raden)
   if (subjectSummary) subjectSummary.style.display = 'none';
 
   wireEvents();
   renderAll();
 
-  // Onboarding: om inga barn finns, öppna direkt och visa add-läge med ämnen
   ensureOnboarding();
   validateForm();
   toggleTimesRow();
 });
 
 function wireEvents() {
-  // Top-level actions
   if (addBtn) addBtn.addEventListener('click', addHomework);
+
   if (addQuickBtn) addQuickBtn.addEventListener('click', () => {
     if (!hasAnyChild()) {
       openModal(true);
@@ -236,22 +263,20 @@ function wireEvents() {
     });
   }
 
-  // Filters
   chips.forEach(c => {
     c.addEventListener('click', () => {
       if (!hasAnyChild()) {
         openModal(true);
         return;
       }
-      const s = state();
-      s.filter = c.dataset.filter || 'active';
-      setActiveChip(s.filter);
+      const st = state();
+      st.filter = c.dataset.filter || 'active';
+      setActiveChip(st.filter);
       saveStore();
       renderAll();
     });
   });
 
-  // Inputs
   if (isExamInput) isExamInput.addEventListener('change', () => {
     toggleTimesRow();
     validateForm();
@@ -289,24 +314,44 @@ function ensureOnboarding() {
 }
 
 function openModal(isOnboarding = false) {
-  // onboarding text
   if (onboardingNote) onboardingNote.style.display = (isOnboarding || !hasAnyChild()) ? 'block' : 'none';
 
-  // om inga barn: direkt add-läge (editor), list döljs
   if (!hasAnyChild()) {
     startAddChildMode(true);
   } else {
     showChildrenListMode();
   }
 
-  // Stäng får inte gå om inga barn finns
   if (closeModalBtn) closeModalBtn.disabled = !hasAnyChild();
 
   modalBackdrop?.removeAttribute('hidden');
 }
 
+function ensureQuickGuideButton() {
+  if (!childrenListArea) return;
+  if (childrenListArea.querySelector('[data-quickguide-btn="1"]')) return;
+
+  // Lägg den nära "Lägg till barn"-knappen
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.textContent = 'Visa snabbguide';
+  btn.className = 'ghost';
+  btn.setAttribute('data-quickguide-btn', '1');
+  btn.style.marginLeft = '8px';
+
+  btn.addEventListener('click', () => {
+    showSwipeTutorial({ force: true });
+  });
+
+  // Försök placera efter Lägg till-knappen, annars sist i childrenListArea
+  if (openChildEditorBtn && openChildEditorBtn.parentNode) {
+    openChildEditorBtn.parentNode.insertBefore(btn, openChildEditorBtn.nextSibling);
+  } else {
+    childrenListArea.appendChild(btn);
+  }
+}
+
 function showChildrenListMode() {
-  // listläge: visa list, dölj editor
   if (childrenListArea) childrenListArea.style.display = '';
   if (childEditor) childEditor.setAttribute('hidden','');
 
@@ -319,22 +364,20 @@ function showChildrenListMode() {
 
   editingChildSubjectsName = null;
   renderChildrenList();
+  ensureQuickGuideButton();
 }
 
 function startAddChildMode(forceOnboarding = false) {
   editingChildSubjectsName = null;
 
-  // add-läge: dölj list, visa editor
   if (childrenListArea) childrenListArea.style.display = 'none';
   if (childEditor) childEditor.removeAttribute('hidden');
 
   if (openChildEditorBtn) openChildEditorBtn.disabled = true;
 
-  // knappar: visa Spara, göm Stäng (så man inte stänger av misstag)
   if (saveNewChildBtn) saveNewChildBtn.style.display = '';
   if (closeModalBtn) closeModalBtn.style.display = 'none';
 
-  // reset form
   if (newChildName) {
     newChildName.disabled = false;
     newChildName.value = '';
@@ -345,7 +388,6 @@ function startAddChildMode(forceOnboarding = false) {
     buildSubjectsRows(newChildSubjects, []);
   }
 
-  // onboarding kräver minst 1 barn
   if (forceOnboarding && closeModalBtn) closeModalBtn.disabled = true;
 }
 
@@ -374,41 +416,33 @@ function startEditChildSubjects(name) {
 }
 
 function closeModal() {
-  // får inte stänga om inga barn finns
   if (!hasAnyChild()) return;
   modalBackdrop?.setAttribute('hidden','');
 }
 
 /* ----------------------------- Children CRUD ----------------------------- */
 function onSaveChildClick() {
-  if (editingChildSubjectsName) {
-    saveEditedChildSubjects();
-  } else {
-    addNewChild();
-  }
+  if (editingChildSubjectsName) saveEditedChildSubjects();
+  else addNewChild();
 }
 
 function addNewChild() {
   const name = (newChildName?.value || '').trim();
-  if (!name) {
-    alert('Ange ett namn.');
-    return;
-  }
-  if (store.children && store.children[name]) {
-    alert('Det finns redan ett barn med det namnet.');
-    return;
-  }
+  if (!name) { alert('Ange ett namn.'); return; }
+  if (store.children && store.children[name]) { alert('Det finns redan ett barn med det namnet.'); return; }
+
   const subjects = Array.from(newChildSubjects?.querySelectorAll('.sub-chip.active') || [])
     .map(b => b.dataset.sub);
 
   if (!store.children) store.children = {};
   store.children[name] = { subjects, todos: [], filter: 'active', focusedSubject: '' };
-  store.currentChild = name;
+
+  // Om vi just lagt första barnet: gör default "ALLA" när vi återgår till appen
+  store.currentChild = ALL_VIEW_KEY;
 
   saveStore();
   renderAll();
 
-  // efter spar: tillbaka till listläge
   if (closeModalBtn) closeModalBtn.disabled = false;
   showToast(`Lade till ${name}`);
   showChildrenListMode();
@@ -436,23 +470,21 @@ function deleteChild(name) {
 
   if (store.children) delete store.children[name];
   const names = store.children ? Object.keys(store.children) : [];
-  store.currentChild = names.length ? names.sort()[0] : '';
+
+  // om inga barn kvar
+  if (names.length === 0) store.currentChild = '';
+  else store.currentChild = ALL_VIEW_KEY;
 
   saveStore();
   renderAll();
 
-  if (!hasAnyChild()) {
-    // tillbaka till onboarding/add-läge
-    openModal(true);
-  } else {
-    renderChildrenList();
-  }
+  if (!hasAnyChild()) openModal(true);
+  else renderChildrenList();
 }
 
 function renderChildrenList() {
   if (!childrenList) return;
   childrenList.innerHTML = '';
-
   if (!hasAnyChild()) return;
 
   const names = Object.keys(store.children).sort((a,b)=>a.localeCompare(b,'sv'));
@@ -547,10 +579,12 @@ function addHomework() {
     alert('Lägg till ett barn först.');
     return;
   }
+  if (isAllView()) {
+    alert('Välj ett barn i rullistan för att lägga till en läxa/prov.');
+    return;
+  }
 
-  // För tutorial: var appen helt tom på uppgifter innan vi lägger till?
   const wasEmptyBefore = totalTaskCountAllChildren() === 0;
-
   const s = state();
 
   const subj = subjectSelect?.value || '';
@@ -560,22 +594,10 @@ function addHomework() {
   const isExam = !!isExamInput?.checked;
   const isGlossary = !!isGlossaryInput?.checked;
 
-  if (!due) {
-    alert(isExam ? 'Ange datum för provet.' : 'Ange datum för läxan.');
-    dueInput?.focus();
-    return;
-  }
-  if (!task) {
-    alert('Beskriv läxan.');
-    taskInput?.focus();
-    return;
-  }
-  if (!s.subjects.includes(subj)) {
-    alert('Ämnet är inte aktivt för detta barn. Lägg till ämnet under "Hantera barn".');
-    return;
-  }
+  if (!due) { alert(isExam ? 'Ange datum för provet.' : 'Ange datum för läxan.'); dueInput?.focus(); return; }
+  if (!task) { alert('Beskriv läxan.'); taskInput?.focus(); return; }
+  if (!s.subjects.includes(subj)) { alert('Ämnet är inte aktivt för detta barn. Lägg till ämnet under "Hantera barn".'); return; }
 
-  // repetitioner bara om glosor och inte prov
   const times = (!isExam && isGlossary) ? (parseInt(timesInput?.value || '1', 10) || 1) : 1;
 
   s.todos.push({
@@ -597,23 +619,21 @@ function addHomework() {
   renderAll();
   showToast(isExam ? 'Prov tillagt' : 'Läxa tillagd');
 
-  // Stäng "Lägg till läxa/prov"-panelen efter att man lagt till
-  if (inputRow && !inputRow.hasAttribute('hidden')) {
-    inputRow.setAttribute('hidden', '');
-  }
+  // Stäng add-panel
+  if (inputRow && !inputRow.hasAttribute('hidden')) inputRow.setAttribute('hidden', '');
   if (addQuickBtn) {
     addQuickBtn.setAttribute('aria-expanded', 'false');
     addQuickBtn.textContent = 'Lägg till läxa/prov';
   }
 
-  // Mini-tutorial: visa EN gång vid första tillagda uppgift
-  if (wasEmptyBefore) {
-    setTimeout(() => showSwipeTutorialOnce(), 80);
-  }
+  // visa snabbguide EN gång vid första uppgiften
+  if (wasEmptyBefore) setTimeout(() => showSwipeTutorialOnce(), 80);
 }
 
-function tick(id) {
-  const s = state();
+function tick(id, childName = null) {
+  const targetChild = childName || store.currentChild;
+  const s = getChildStateByName(targetChild);
+  if (!s) return;
   const t = s.todos.find(x => x.id === id);
   if (!t) return;
 
@@ -640,8 +660,10 @@ function tick(id) {
   showToast('Läxa klar!');
 }
 
-function removeItem(id) {
-  const s = state();
+function removeItem(id, childName = null) {
+  const targetChild = childName || store.currentChild;
+  const s = getChildStateByName(targetChild);
+  if (!s) return;
   const t = s.todos.find(x => x.id === id);
   if (!t) return;
 
@@ -672,6 +694,12 @@ function renderChildSelect() {
     return;
   }
 
+  // ALLA först
+  const allOpt = document.createElement('option');
+  allOpt.value = ALL_VIEW_KEY;
+  allOpt.textContent = 'ALLA';
+  childSelect.appendChild(allOpt);
+
   const names = Object.keys(store.children).sort((a,b)=>a.localeCompare(b,'sv'));
   names.forEach(name => {
     const o = document.createElement('option');
@@ -680,15 +708,30 @@ function renderChildSelect() {
     childSelect.appendChild(o);
   });
 
-  if (!store.currentChild || !store.children[store.currentChild]) {
-    store.currentChild = names[0] || '';
-    saveStore();
+  // Default: ALLA (om inte redan valt)
+  if (!store.currentChild) store.currentChild = ALL_VIEW_KEY;
+  if (store.currentChild !== ALL_VIEW_KEY && !store.children[store.currentChild]) {
+    store.currentChild = ALL_VIEW_KEY;
   }
-  childSelect.value = store.currentChild || '';
+
+  childSelect.value = store.currentChild || ALL_VIEW_KEY;
 }
 
 function renderSubjectOptions() {
   if (!subjectSelect) return;
+
+  // Om ALLA-läge: man ska inte kunna välja ämne/ lägga till uppgift
+  if (isAllView()) {
+    subjectSelect.innerHTML = '';
+    const o = document.createElement('option');
+    o.value = '';
+    o.textContent = '(Välj ett barn för att lägga till läxa/prov)';
+    subjectSelect.appendChild(o);
+    subjectSelect.disabled = true;
+    return;
+  }
+
+  subjectSelect.disabled = false;
   const s = state();
   subjectSelect.innerHTML = '';
 
@@ -700,7 +743,6 @@ function renderSubjectOptions() {
     return;
   }
 
-  // visa bara aktiverade ämnen + ikon
   ALL_SUBJECTS
     .filter(sub => s.subjects.includes(sub))
     .forEach(sub => {
@@ -711,13 +753,22 @@ function renderSubjectOptions() {
     });
 }
 
+function collectAllTodos() {
+  const out = [];
+  if (!store.children) return out;
+  Object.keys(store.children).forEach(childName => {
+    const s = getChildStateByName(childName);
+    (s?.todos || []).forEach(t => out.push({ ...t, _child: childName }));
+  });
+  return out;
+}
+
 function renderList() {
   if (!listEl) return;
-  const s = state();
   listEl.innerHTML = '';
 
-  const viewFilter = s.filter || 'active';
   const todayISO = todayLocalISO();
+  const isNarrow = window.matchMedia('(max-width: 420px)').matches;
 
   const withinLastMonth = (iso) => {
     if (!iso) return false;
@@ -727,7 +778,14 @@ function renderList() {
     return diff >= 0 && diff <= 30;
   };
 
-  let items = (s.todos || []).filter(t => {
+  const viewFilter = state().filter || 'active';
+
+  // Hämta items beroende på ALLA eller ett barn
+  let baseItems = [];
+  if (isAllView()) baseItems = collectAllTodos();
+  else baseItems = (getChildStateByName(store.currentChild)?.todos || []).map(t => ({ ...t, _child: store.currentChild }));
+
+  let items = baseItems.filter(t => {
     if (viewFilter === 'active' && t.done) return false;
     if (viewFilter === 'exam' && (t.done || !t.isExam)) return false;
     if (viewFilter === 'done' && !t.done) return false;
@@ -769,9 +827,28 @@ function renderList() {
     card.className = 'li-card';
 
     const left = document.createElement('div');
+
     const text = document.createElement('div');
     text.className = 'text';
-    text.textContent = `${subjectIcons[t.subj] || '📘'} ${t.subj}: ${t.task}`;
+
+    // Barn-badge (tydlig markering)
+    const childBadge = document.createElement('span');
+    childBadge.textContent = t._child || '';
+    childBadge.style.display = 'inline-flex';
+    childBadge.style.alignItems = 'center';
+    childBadge.style.padding = '3px 8px';
+    childBadge.style.borderRadius = '999px';
+    childBadge.style.background = '#eee';
+    childBadge.style.color = '#111';
+    childBadge.style.fontSize = '12px';
+    childBadge.style.fontWeight = '800';
+    childBadge.style.marginRight = '8px';
+
+    const mainText = document.createElement('span');
+    mainText.textContent = `${subjectIcons[t.subj] || '📘'} ${t.subj}: ${t.task}`;
+
+    text.appendChild(childBadge);
+    text.appendChild(mainText);
 
     const meta = document.createElement('div');
     meta.className = 'meta-line';
@@ -784,11 +861,9 @@ function renderList() {
       const total = t.timesTotal || 1;
       const leftCount = t.timesLeft ?? total;
       const doneCount = Math.max(0, total - leftCount);
-      meta.innerHTML += ` • <span class="progress-badge">${doneCount}/${total} gjorda</span>`;
+      meta.innerHTML += ` • <span class="progress-badge">${isNarrow ? `${doneCount}/${total}` : `${doneCount}/${total} gjorda`}</span>`;
     }
-    if (t.done && t.completedOn) {
-      meta.innerHTML += ` • Klar: ${formatDate(t.completedOn)}`;
-    }
+    if (t.done && t.completedOn) meta.innerHTML += ` • Klar: ${formatDate(t.completedOn)}`;
 
     left.appendChild(text);
     left.appendChild(meta);
@@ -799,7 +874,7 @@ function renderList() {
     right.style.gap = '8px';
     right.style.marginLeft = 'auto';
 
-    // PROV-badge före kugghjulet
+    // PROV badge före kugghjulet
     if (t.isExam) {
       const examBadge = document.createElement('span');
       examBadge.textContent = 'PROV';
@@ -822,7 +897,7 @@ function renderList() {
     editBtn.title = 'Redigera';
     editBtn.addEventListener('touchstart', e => e.stopPropagation(), { passive: true });
     editBtn.addEventListener('mousedown', e => e.stopPropagation());
-    editBtn.onclick = () => openEditModal(t.id);
+    editBtn.onclick = () => openEditModal(t.id, t._child);
 
     right.appendChild(editBtn);
 
@@ -832,8 +907,8 @@ function renderList() {
 
     attachSwipe(
       li,
-      () => { if (!t.isExam) tick(t.id); else showToast('Provdatum styr avslut'); },
-      () => removeItem(t.id)
+      () => { if (!t.isExam) tick(t.id, t._child); else showToast('Provdatum styr avslut'); },
+      () => removeItem(t.id, t._child)
     );
 
     listEl.appendChild(li);
@@ -848,8 +923,8 @@ function toggleHistoryNote() {
 }
 
 function setActiveChip(filter) {
-  chips.forEach(x => x.classList.remove('active'));
-  const target = chips.find(x => x.dataset.filter === filter);
+  chips.forEach(x=>x.classList.remove('active'));
+  const target = chips.find(x=>x.dataset.filter===filter);
   if (target) target.classList.add('active');
 }
 
@@ -860,11 +935,9 @@ function toggleInputRow() {
   if (isHidden) {
     inputRow.removeAttribute('hidden');
     addQuickBtn?.setAttribute('aria-expanded','true');
-    addQuickBtn && (addQuickBtn.textContent = 'Stäng');
-    setTimeout(() => taskInput?.focus(), 0);
-  } else {
-    abortInput();
-  }
+    addQuickBtn && (addQuickBtn.textContent='Stäng');
+    setTimeout(()=>taskInput?.focus(),0);
+  } else abortInput();
 }
 
 function abortInput() {
@@ -872,11 +945,10 @@ function abortInput() {
   validateForm();
   inputRow?.setAttribute('hidden','');
   addQuickBtn?.setAttribute('aria-expanded','false');
-  addQuickBtn && (addQuickBtn.textContent = 'Lägg till läxa/prov');
+  addQuickBtn && (addQuickBtn.textContent='Lägg till läxa/prov');
 }
 
 function toggleTimesRow() {
-  // Repetitioner ska visas bara om "Glosor" är ikryssad och inte prov
   const isExam = !!isExamInput?.checked;
   const isGlossary = !!isGlossaryInput?.checked;
 
@@ -886,7 +958,6 @@ function toggleTimesRow() {
     else timesRow.setAttribute('hidden','');
   }
 
-  // om prov: tvinga bort glosor UI-krock logiskt
   if (isExam && isGlossaryInput) {
     isGlossaryInput.checked = false;
     if (timesRow) timesRow.setAttribute('hidden','');
@@ -894,7 +965,9 @@ function toggleTimesRow() {
 }
 
 function validateForm() {
+  // I ALLA-läge ska man inte kunna lägga till (måste välja barn)
   const ok =
+    !isAllView() &&
     !!subjectSelect?.value &&
     (taskInput?.value || '').trim().length > 0 &&
     !!(dueInput?.value || '');
@@ -906,26 +979,28 @@ function validateForm() {
 }
 
 /* ----------------------------- Edit modal ----------------------------- */
-function openEditModal(id) {
-  const s = state();
-  const t = s.todos.find(x => x.id === id);
+function openEditModal(id, childName) {
+  const s = getChildStateByName(childName || store.currentChild);
+  if (!s) return;
+  const t = s.todos.find(x=>x.id===id);
   if (!t) return;
 
   editingId = id;
+  editingChildNameForTask = childName || store.currentChild;
 
   editSubject.innerHTML = '';
-  s.subjects.forEach(sub => {
-    const o = document.createElement('option');
-    o.value = sub;
-    o.textContent = `${subjectIcons[sub] || '📘'} ${sub}`;
+  s.subjects.forEach(sub=>{
+    const o=document.createElement('option');
+    o.value=sub;
+    o.textContent=`${subjectIcons[sub]||'📘'} ${sub}`;
     editSubject.appendChild(o);
   });
 
-  editSubject.value = t.subj;
-  editTask.value = t.task;
-  editIsExam.checked = !!t.isExam;
-  editDue.value = t.due || '';
-  editTimes.value = t.timesTotal || 1;
+  editSubject.value=t.subj;
+  editTask.value=t.task;
+  editIsExam.checked=!!t.isExam;
+  editDue.value=t.due||'';
+  editTimes.value=t.timesTotal||1;
 
   toggleEditTimesForExam();
   editBackdrop?.removeAttribute('hidden');
@@ -934,63 +1009,56 @@ function openEditModal(id) {
 function toggleEditTimesForExam() {
   const isExam = !!editIsExam.checked;
   if (isExam) {
-    editTimes.value = '';
-    editTimes.placeholder = '–';
-    editTimes.disabled = true;
+    editTimes.value='';
+    editTimes.placeholder='–';
+    editTimes.disabled=true;
   } else {
-    editTimes.disabled = false;
-    editTimes.placeholder = '';
-    if (!editTimes.value) editTimes.value = 1;
+    editTimes.disabled=false;
+    editTimes.placeholder='';
+    if(!editTimes.value) editTimes.value=1;
   }
 }
 
 function closeEditModal() {
-  editingId = null;
+  editingId=null;
+  editingChildNameForTask=null;
   editBackdrop?.setAttribute('hidden','');
 }
 
 function saveEditChanges() {
-  if (editingId == null) return;
-  const s = state();
-  const t = s.todos.find(x => x.id === editingId);
-  if (!t) return;
+  if (editingId==null) return;
+  const s = getChildStateByName(editingChildNameForTask || store.currentChild);
+  if (!s) return;
+  const t = s.todos.find(x=>x.id===editingId);
+  if(!t) return;
 
-  const newSubj = editSubject.value;
-  const newTask = editTask.value.trim();
-  const newIsExam = !!editIsExam.checked;
-  const newDue = editDue.value;
+  const newSubj=editSubject.value;
+  const newTask=editTask.value.trim();
+  const newIsExam=!!editIsExam.checked;
+  const newDue=editDue.value;
 
-  if (!newDue) {
-    alert(newIsExam ? 'Ange datum för provet.' : 'Ange datum för läxan.');
-    return;
-  }
-  if (!newTask) {
-    alert('Beskriv läxan.');
-    return;
-  }
-  if (!s.subjects.includes(newSubj)) {
-    alert('Ämnet är inte aktivt för detta barn.');
-    return;
-  }
+  if(!newDue){ alert(newIsExam?'Ange datum för provet.':'Ange datum för läxan.'); return; }
+  if(!newTask){ alert('Beskriv läxan.'); return; }
+  if(!s.subjects.includes(newSubj)){ alert('Ämnet är inte aktivt för detta barn.'); return; }
 
-  t.subj = newSubj;
-  t.task = newTask;
-  t.isExam = newIsExam;
-  t.due = newDue;
+  t.subj=newSubj;
+  t.task=newTask;
+  t.isExam=newIsExam;
+  t.due=newDue;
 
   if (newIsExam) {
-    t.timesTotal = 1;
-    t.timesLeft = t.done ? 0 : 1;
-    t.isGlossary = false;
+    t.timesTotal=1;
+    t.timesLeft=t.done?0:1;
+    t.isGlossary=false;
   } else {
-    const newTotal = Math.max(1, parseInt(editTimes.value || '1', 10));
-    t.timesTotal = newTotal;
-    if (!t.isGlossary) {
-      t.timesTotal = 1;
-      t.timesLeft = t.done ? 0 : 1;
+    const newTotal=Math.max(1,parseInt(editTimes.value||'1',10));
+    t.timesTotal=newTotal;
+    if(!t.isGlossary){
+      t.timesTotal=1;
+      t.timesLeft=t.done?0:1;
     } else {
-      const oldLeft = t.timesLeft ?? newTotal;
-      t.timesLeft = Math.min(oldLeft, newTotal);
+      const oldLeft=t.timesLeft ?? newTotal;
+      t.timesLeft=Math.min(oldLeft,newTotal);
     }
   }
 
@@ -1002,210 +1070,197 @@ function saveEditChanges() {
 
 /* ----------------------------- Exams finalize ----------------------------- */
 function finalizeExamsByDate() {
-  const s = state();
-  if (!s.todos) return;
+  if (!store.children) return;
+  const today=todayLocalISO();
+  let changed=false;
 
-  const today = todayLocalISO();
-  let changed = false;
-
-  s.todos.forEach(t => {
-    if (t.isExam && t.due && t.due < today && !t.done) {
-      t.done = true;
-      t.completedOn = t.due;
-      changed = true;
-    }
+  Object.keys(store.children).forEach(childName=>{
+    const s=getChildStateByName(childName);
+    if(!s) return;
+    s.todos.forEach(t=>{
+      if(t.isExam && t.due && t.due<today && !t.done){
+        t.done=true;
+        t.completedOn=t.due;
+        changed=true;
+      }
+    });
   });
 
-  if (changed) saveStore();
+  if(changed) saveStore();
 }
 
 /* ----------------------------- Helpers ----------------------------- */
 function todayLocalISO() {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth()+1).padStart(2,'0');
-  const dd = String(d.getDate()).padStart(2,'0');
+  const d=new Date();
+  const y=d.getFullYear();
+  const m=String(d.getMonth()+1).padStart(2,'0');
+  const dd=String(d.getDate()).padStart(2,'0');
   return `${y}-${m}-${dd}`;
 }
-function isoToDate(iso) { return new Date(iso + 'T00:00:00'); }
-const MS_DAY = 24*60*60*1000;
-function daysDiff(a,b) {
-  const a0 = new Date(a.getFullYear(),a.getMonth(),a.getDate());
-  const b0 = new Date(b.getFullYear(),b.getMonth(),b.getDate());
+function isoToDate(iso){ return new Date(iso+'T00:00:00'); }
+const MS_DAY=24*60*60*1000;
+function daysDiff(a,b){
+  const a0=new Date(a.getFullYear(),a.getMonth(),a.getDate());
+  const b0=new Date(b.getFullYear(),b.getMonth(),b.getDate());
   return Math.floor((a0-b0)/MS_DAY);
 }
 
-function computeDueLabel(t, todayISO, dateNice) {
-  if (!t.due) return 'Ingen deadline';
-  if (t.isExam && t.due < todayISO) return `Provdatum: ${dateNice}`;
-  if (!t.done && t.due === todayISO) return 'Idag';
-  if (!t.done && t.due < todayISO) return 'Försenad';
+function computeDueLabel(t,todayISO,dateNice){
+  if(!t.due) return 'Ingen deadline';
+  if(t.isExam && t.due<todayISO) return `Provdatum: ${dateNice}`;
+  if(!t.done && t.due===todayISO) return 'Idag';
+  if(!t.done && t.due<todayISO) return 'Försenad';
   return `${dateNice}`;
 }
-function computeDueClass(t, todayISO) {
-  if (!t.due) return '';
-  if (t.isExam && t.due < todayISO) return '';
-  if (!t.done && t.due === todayISO) return 'today';
-  if (!t.done && t.due < todayISO) return 'overdue';
+function computeDueClass(t,todayISO){
+  if(!t.due) return '';
+  if(t.isExam && t.due<todayISO) return '';
+  if(!t.done && t.due===todayISO) return 'today';
+  if(!t.done && t.due<todayISO) return 'overdue';
   return '';
 }
 
-function safeId() {
-  return 'id-' + Math.random().toString(36).slice(2,10);
-}
+function safeId(){ return 'id-'+Math.random().toString(36).slice(2,10); }
 
-function resetInputs() {
-  if (taskInput) taskInput.value = '';
-  if (dueInput) dueInput.value = '';
-  if (isExamInput) isExamInput.checked = false;
-  if (isGlossaryInput) isGlossaryInput.checked = false;
+function resetInputs(){
+  if(taskInput) taskInput.value='';
+  if(dueInput) dueInput.value='';
+  if(isExamInput) isExamInput.checked=false;
+  if(isGlossaryInput) isGlossaryInput.checked=false;
 
-  if (timesInput) timesInput.value = 1;
-  if (timesRow) timesRow.setAttribute('hidden','');
+  if(timesInput) timesInput.value=1;
+  if(timesRow) timesRow.setAttribute('hidden','');
 
   toggleTimesRow();
 }
 
-function formatDate(d) {
-  try {
-    const [y,m,dd] = d.split('-');
-    return `${dd}/${m}/${y}`;
-  } catch { return d; }
+function formatDate(d){
+  try{ const [y,m,dd]=d.split('-'); return `${dd}/${m}/${y}`; }
+  catch{ return d; }
 }
 
 let _toastTimer;
-function showToast(msg, ms = 1800) {
-  const el = document.getElementById('toast');
-  if (!el) return;
-  el.textContent = msg;
+function showToast(msg,ms=1800){
+  const el=document.getElementById('toast');
+  if(!el) return;
+  el.textContent=msg;
   el.classList.add('show');
   clearTimeout(_toastTimer);
-  _toastTimer = setTimeout(() => el.classList.remove('show'), ms);
+  _toastTimer=setTimeout(()=>el.classList.remove('show'),ms);
 }
 
-function haptic(type='light') {
-  try {
-    if ('vibrate' in navigator) {
-      if (type === 'heavy') navigator.vibrate([18,60,18]);
-      else if (type === 'medium') navigator.vibrate(30);
-      else if (type === 'success') navigator.vibrate([8,40,8]);
+function haptic(type='light'){
+  try{
+    if('vibrate' in navigator){
+      if(type==='heavy') navigator.vibrate([18,60,18]);
+      else if(type==='medium') navigator.vibrate(30);
+      else if(type==='success') navigator.vibrate([8,40,8]);
       else navigator.vibrate(10);
     }
-  } catch {}
+  }catch{}
 }
 
-function attachSwipe(li, onRight, onLeft) {
-  const card = li.querySelector('.li-card') || li.firstChild;
-  if (!card) return;
+function attachSwipe(li,onRight,onLeft){
+  const card=li.querySelector('.li-card')||li.firstChild;
+  if(!card) return;
 
-  const THRESHOLD = 72;
-  let startX = 0, currentX = 0, dragging = false, startedOnInteractive = false;
+  const THRESHOLD=72;
+  let startX=0,currentX=0,dragging=false,startedOnInteractive=false;
+  const isInteractive=el=>!!el && el.closest && el.closest('button,a,input,select,textarea,[role="button"]');
 
-  const isInteractive = (el) => !!el && el.closest && el.closest('button,a,input,select,textarea,[role="button"]');
-
-  const start = (x, evt) => {
-    startedOnInteractive = isInteractive(evt?.target);
-    if (startedOnInteractive) return;
-    dragging = true;
-    startX = x;
-    card.style.transition = 'none';
+  const start=(x,evt)=>{
+    startedOnInteractive=isInteractive(evt?.target);
+    if(startedOnInteractive) return;
+    dragging=true;
+    startX=x;
+    card.style.transition='none';
     li.classList.remove('swipe-left','swipe-right');
   };
 
-  const move = (x) => {
-    if (!dragging) return;
-    currentX = x - startX;
-    card.style.transform = `translateX(${currentX}px)`;
-    if (currentX > 0) {
-      li.classList.add('swipe-right');
-      li.classList.remove('swipe-left');
-    } else if (currentX < 0) {
-      li.classList.add('swipe-left');
-      li.classList.remove('swipe-right');
-    }
+  const move=x=>{
+    if(!dragging) return;
+    currentX=x-startX;
+    card.style.transform=`translateX(${currentX}px)`;
+    if(currentX>0){ li.classList.add('swipe-right'); li.classList.remove('swipe-left'); }
+    else if(currentX<0){ li.classList.add('swipe-left'); li.classList.remove('swipe-right'); }
   };
 
-  const reset = () => {
-    card.style.transform = 'translateX(0)';
+  const reset=()=>{
+    card.style.transform='translateX(0)';
     li.classList.remove('swipe-left','swipe-right');
   };
 
-  const end = () => {
-    if (startedOnInteractive) { startedOnInteractive = false; return; }
-    if (!dragging) return;
-    dragging = false;
-    card.style.transition = '';
-    if (currentX > THRESHOLD) {
-      haptic('success');
-      onRight?.();
-      reset();
-    } else if (currentX < -THRESHOLD) {
-      haptic('heavy');
-      onLeft?.();
-      reset();
-    } else {
-      reset();
-    }
-    currentX = 0;
+  const end=()=>{
+    if(startedOnInteractive){ startedOnInteractive=false; return; }
+    if(!dragging) return;
+    dragging=false;
+    card.style.transition='';
+    if(currentX>THRESHOLD){ haptic('success'); onRight?.(); reset(); }
+    else if(currentX<-THRESHOLD){ haptic('heavy'); onLeft?.(); reset(); }
+    else reset();
+    currentX=0;
   };
 
-  li.addEventListener('touchstart', e => start(e.touches[0].clientX, e), { passive: true });
-  li.addEventListener('touchmove',  e => move(e.touches[0].clientX), { passive: true });
-  li.addEventListener('touchend', end);
+  li.addEventListener('touchstart',e=>start(e.touches[0].clientX,e),{passive:true});
+  li.addEventListener('touchmove',e=>move(e.touches[0].clientX),{passive:true});
+  li.addEventListener('touchend',end);
 
-  li.addEventListener('mousedown', e => start(e.clientX, e));
-  window.addEventListener('mousemove', e => move(e.clientX));
-  window.addEventListener('mouseup', end);
+  li.addEventListener('mousedown',e=>start(e.clientX,e));
+  window.addEventListener('mousemove',e=>move(e.clientX));
+  window.addEventListener('mouseup',end);
 }
 
 /* ----------------------------- Storage ----------------------------- */
-function saveStore() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
-}
+function saveStore(){ localStorage.setItem(STORAGE_KEY,JSON.stringify(store)); }
 
-function loadStore() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { currentChild: '', children: {} };
-    const parsed = JSON.parse(raw);
-    if (!parsed.children) parsed.children = {};
+function loadStore(){
+  try{
+    const raw=localStorage.getItem(STORAGE_KEY);
+    if(!raw) return { currentChild:'', children:{} };
+    const parsed=JSON.parse(raw);
+    if(!parsed.children) parsed.children={};
     return parsed;
-  } catch {
-    return { currentChild: '', children: {} };
+  }catch{
+    return { currentChild:'', children:{} };
   }
 }
 
-function migrateStore() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return;
-    const parsed = JSON.parse(raw);
-    if (!parsed.children) return;
+function migrateStore(){
+  try{
+    const raw=localStorage.getItem(STORAGE_KEY);
+    if(!raw) return;
+    const parsed=JSON.parse(raw);
+    if(!parsed.children) return;
 
-    Object.values(parsed.children).forEach(c => {
-      if (!Array.isArray(c.subjects)) c.subjects = [];
-      if (!Array.isArray(c.todos)) c.todos = [];
+    Object.values(parsed.children).forEach(c=>{
+      if(!Array.isArray(c.subjects)) c.subjects=[];
+      if(!Array.isArray(c.todos)) c.todos=[];
 
-      c.todos.forEach(t => {
-        if (typeof t.timesTotal !== 'number' || t.timesTotal < 1) t.timesTotal = Math.max(1, t.timesLeft || 1);
-        if (typeof t.timesLeft !== 'number') t.timesLeft = t.timesTotal;
+      c.todos.forEach(t=>{
+        if(typeof t.timesTotal!=='number' || t.timesTotal<1) t.timesTotal=Math.max(1,t.timesLeft||1);
+        if(typeof t.timesLeft!=='number') t.timesLeft=t.timesTotal;
+        if(t.timesLeft>t.timesTotal) t.timesLeft=t.timesTotal;
 
-        if (t.timesLeft > t.timesTotal) t.timesLeft = t.timesTotal;
+        if(t.isExam && t.due && t.done && !t.completedOn) t.completedOn=t.due;
+        if(t.done && !t.completedOn) t.completedOn=null;
 
-        if (t.isExam && t.due && t.done && !t.completedOn) t.completedOn = t.due;
-        if (t.done && !t.completedOn) t.completedOn = null;
+        if(typeof t.isGlossary!=='boolean') t.isGlossary=false;
 
-        if (typeof t.isGlossary !== 'boolean') t.isGlossary = false;
-
-        if (t.isExam) {
-          t.isGlossary = false;
-          t.timesTotal = 1;
-          t.timesLeft = t.done ? 0 : 1;
+        if(t.isExam){
+          t.isGlossary=false;
+          t.timesTotal=1;
+          t.timesLeft=t.done?0:1;
         }
       });
     });
 
     store = parsed;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
-  } catch {}
+
+    // Om currentChild saknas men barn finns: default ALLA
+    if (store.children && Object.keys(store.children).length > 0) {
+      if (!store.currentChild) store.currentChild = ALL_VIEW_KEY;
+    }
+
+    localStorage.setItem(STORAGE_KEY,JSON.stringify(store));
+  }catch{}
 }
