@@ -23,7 +23,7 @@ const FAMILY_ID_KEY='laxkollen_family_id_v1';
 const SWIPE_GUIDE_KEY='laxkollen_swipe_guide_shown_v1';
 const ALL_VALUE='__ALL__';
 
-let supabase=null;
+let sb=null;
 let store={
   familyId:null,
   currentChild:ALL_VALUE,
@@ -115,7 +115,7 @@ async function boot(){
     // CDN script is defer; wait a tick
     await waitFor(()=>window.supabase, 4000);
   }
-  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   await ensureAnonSession();
   await ensureFamily();
@@ -140,10 +140,10 @@ function waitFor(fn, ms=2000){
 }
 
 async function ensureAnonSession(){
-  const { data } = await supabase.auth.getSession();
+  const { data } = await sb.auth.getSession();
   if(data?.session) return;
   // Anonymous sign-in so Safari may keep it in Keychain/better persistence
-  await supabase.auth.signInAnonymously();
+  await sb.auth.signInAnonymously();
 }
 
 function parseFamilyCodeFromUrl(){
@@ -182,7 +182,7 @@ async function ensureFamily(){
 
 async function verifyFamilyMembership(familyId){
   try{
-    const uid=(await supabase.auth.getUser()).data.user?.id;
+    const uid=(await sb.auth.getUser()).data.user?.id;
     if(!uid) return false;
     const { data, error } = await supabase
       .from('family_members')
@@ -222,7 +222,7 @@ async function showFamilyOverlay(){
         </div>
 
         <div id="family-created-area" style="display:none;">
-          <div class="family-qr"><canvas id="family-qr"></canvas></div>
+          <div class="family-qr"><div id="family-qr" style="width:220px;height:220px;"></div></div>
           <div class="family-code" id="family-code-out"></div>
           <button type="button" id="family-copy" class="family-smallbtn">Kopiera kod</button>
         </div>
@@ -260,9 +260,10 @@ async function showFamilyOverlay(){
 
       try{
         const link = makeFamilyLink(res.code);
-        const canvas = overlay.querySelector('#family-qr');
-        if(window.QRCode && canvas){
-          await window.QRCode.toCanvas(canvas, link, { margin:1, width:220 });
+        const qrEl = overlay.querySelector('#family-qr');
+        if(window.QRCode && qrEl){
+          qrEl.innerHTML='';
+          new window.QRCode(qrEl, { text: link, width: 220, height: 220, correctLevel: window.QRCode.CorrectLevel.M });
         }
       }catch{}
 
@@ -315,7 +316,7 @@ function genFamilyCode(){
 
 async function createFamily(){
   try{
-    const uid=(await supabase.auth.getUser()).data.user?.id;
+    const uid=(await sb.auth.getUser()).data.user?.id;
     if(!uid) return {ok:false,error:'Ingen användare'};
 
     // try few codes to avoid collision
@@ -349,11 +350,11 @@ async function joinFamilyByCode(codeRaw){
   const code=(codeRaw||'').trim().toUpperCase();
   if(!code) return false;
   try{
-    const uid=(await supabase.auth.getUser()).data.user?.id;
+    const uid=(await sb.auth.getUser()).data.user?.id;
     if(!uid) return false;
 
     // Preferred: RPC (if you add it). If not exists, fallback.
-    const { data: rpcData, error: rpcErr } = await supabase.rpc('join_family_by_code', { p_code: code });
+    const { data: rpcData, error: rpcErr } = await sb.rpc('join_family_by_code', { p_code: code });
     if(!rpcErr && rpcData){
       store.familyId = rpcData;
       localStorage.setItem(FAMILY_ID_KEY, store.familyId);
@@ -618,7 +619,7 @@ async function tick(id){
     update = { times_left: 0, done: true, completed_on: t.completedOn };
   }
 
-  const { error } = await supabase.from('tasks').update(update).eq('id', t.id);
+  const { error } = await sb.from('tasks').update(update).eq('id', t.id);
   if(error){
     console.error(error);
     showToast('Kunde inte spara');
@@ -644,7 +645,7 @@ async function removeItem(id){
   const msg=t.isExam?'Är du säker på att du vill radera detta prov?':'Är du säker på att du vill radera denna läxa?';
   if(!confirm(msg)) return;
 
-  const { error } = await supabase.from('tasks').delete().eq('id', t.id);
+  const { error } = await sb.from('tasks').delete().eq('id', t.id);
   if(error){
     console.error(error);
     showToast('Kunde inte radera');
@@ -760,7 +761,7 @@ async function saveEditChanges(){
     completed_on,
   };
 
-  const { error } = await supabase.from('tasks').update(updatePayload).eq('id', t.id);
+  const { error } = await sb.from('tasks').update(updatePayload).eq('id', t.id);
   if(error){
     console.error(error);
     showToast('Kunde inte spara');
@@ -800,7 +801,7 @@ async function finalizeExamsByDate(){
   try{
     // update one by one (small volumes)
     for(const u of toUpdate){
-      await supabase.from('tasks').update({ done:u.done, completed_on:u.completed_on }).eq('id', u.id);
+      await sb.from('tasks').update({ done:u.done, completed_on:u.completed_on }).eq('id', u.id);
     }
   }catch{}
 }
