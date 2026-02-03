@@ -1,49 +1,55 @@
-const CACHE_NAME = 'laxkollen-v6';
-const APP_SHELL = [
-  './',
-  './index.html',
-  './style.css?v=6',
-  './app.js?v=6',
-  './manifest.json',
-  './icons/icon-192-LK.png',
-  './icons/icon-512-LK.png'
+/* Läxkollen Service Worker (v8) */
+const CACHE_NAME = "laxkollen-cache-v8";
+const PRECACHE_URLS = [
+  "./",
+  "./index.html?v=8",
+  "./style.css?v=8",
+  "./app.js?v=8",
+  "./manifest.json",
+  "./icon-192-LK.png",
+  "./icon-512-LK.png"
 ];
 
-self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(APP_SHELL)));
+self.addEventListener("install", (event) => {
   self.skipWaiting();
-});
-self.addEventListener('activate', e => {
-  e.waitUntil(
-    caches.keys().then(keys => Promise.all(keys.filter(k=>k!==CACHE_NAME).map(k=>caches.delete(k)))),
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS))
   );
-  self.clients.claim();
 });
 
-self.addEventListener('fetch', e => {
-  const req = e.request;
-  const url = new URL(req.url);
-  // Only handle same-origin GET
-  if (req.method !== 'GET' || url.origin !== location.origin) return;
+self.addEventListener("activate", (event) => {
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys.map(k => (k !== CACHE_NAME) ? caches.delete(k) : Promise.resolve()));
+    await self.clients.claim();
+  })());
+});
 
-  // For HTML/navigation, use network-first
-  if (req.mode === 'navigate') {
-    e.respondWith(
-      fetch(req).then(r=>{
-        const copy = r.clone();
-        caches.open(CACHE_NAME).then(c=>c.put('./', copy));
-        return r;
-      }).catch(()=>caches.match('./index.html'))
-    );
-    return;
-  }
+self.addEventListener("fetch", (event) => {
+  const req = event.request;
+  // Only handle GET
+  if (req.method !== "GET") return;
 
-  // For others, cache-first
-  e.respondWith(
-    caches.match(req).then(cached => cached || fetch(req).then(r => {
-      const copy = r.clone();
-      caches.open(CACHE_NAME).then(c=>c.put(req, copy));
-      return r;
-    }).catch(()=>cached))
-  );
+  event.respondWith((async () => {
+    const cache = await caches.open(CACHE_NAME);
+    const cached = await cache.match(req, { ignoreSearch: false });
+    if (cached) return cached;
+
+    try {
+      const fresh = await fetch(req);
+      // Cache same-origin navigation + static assets
+      const url = new URL(req.url);
+      if (url.origin === location.origin) {
+        // only cache basic responses
+        if (fresh && fresh.status === 200 && fresh.type === "basic") {
+          cache.put(req, fresh.clone());
+        }
+      }
+      return fresh;
+    } catch (e) {
+      // Offline fallback to app shell
+      const fallback = await cache.match("./index.html?v=8");
+      return fallback || Response.error();
+    }
+  })());
 });

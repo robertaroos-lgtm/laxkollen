@@ -4,8 +4,8 @@
    - Full sync av barn + läxor/prov
 */
 
-const SUPABASE_URL = 'https://cxceqsdvxgzskkhkwmpl.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_xU53VmiQboqZ4E8ckK8lGA_BbQ2QcpH';
+const SUPABASE_URL = "https://cxceqsdvxgzskkhkwmpl.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_xU53VmiQboqZ4E8ckK8lGA_BbQ2QcpH";
 
 const SUBJECT_GROUPS=[
   {title:'Språk',items:['Franska','Engelska','Spanska','Svenska','Italienska','Tyska']},
