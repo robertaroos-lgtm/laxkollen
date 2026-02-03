@@ -209,12 +209,112 @@ li.exam .text { font-weight:700; }
   .swipe-hint{ transition:none; }
   .toast{ transition:none; }
 }
-/* Extra luft under rubriken i Hantera barn-modalen */
-#children-help,
-#onboarding-note {
-  margin-top: 8px;
+
+/* ===============================
+   Family sync (Supabase) overlay
+   =============================== */
+
+.family-overlay{
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(0,0,0,0.45);
+  backdrop-filter: blur(8px);
 }
-/* Dölj raden med ämnessammanfattning (Fr, En, Sv, ... ) */
-#subject-summary {
-  display: none;
+
+.family-card{
+  width: min(480px, 100%);
+  background: #fff;
+  border-radius: 18px;
+  padding: 16px;
+  box-shadow: 0 12px 36px rgba(0,0,0,0.25);
+}
+
+.family-title{
+  font-size: 18px;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.family-sub{
+  font-size: 13px;
+  color: rgba(0,0,0,0.65);
+  line-height: 1.35;
+}
+
+.family-label{
+  display:block;
+  font-size: 12px;
+  font-weight: 700;
+  margin: 12px 0 6px;
+  color: #222;
+}
+
+.family-input{
+  width: 100%;
+  padding: 12px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.15);
+  font-size: 16px;
+  outline: none;
+}
+
+.family-actions{
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.family-primary, .family-secondary{
+  flex: 1;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.family-primary{ background:#111; color:#fff; }
+.family-secondary{ background:#f2f2f2; color:#111; }
+
+.family-msg{
+  margin-top: 10px;
+  font-size: 13px;
+  color: #444;
+  min-height: 18px;
+}
+
+.family-qr{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  margin-top: 12px;
+}
+
+.family-code{
+  margin-top: 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 14px;
+  padding: 10px;
+  border-radius: 12px;
+  background: #f7f7f7;
+  border: 1px solid rgba(0,0,0,0.08);
+  text-align:center;
+  letter-spacing: 0.5px;
+}
+
+.family-smallbtn{
+  width: 100%;
+  margin-top: 10px;
+  border: none;
+  border-radius: 12px;
+  padding: 10px;
+  font-weight: 800;
+  cursor: pointer;
+  background: #f2f2f2;
+  color: #111;
 }
