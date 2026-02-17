@@ -1,55 +1,64 @@
-/* Läxkollen Service Worker (v8) */
-const CACHE_NAME = "laxkollen-cache-v8";
-const PRECACHE_URLS = [
-  "./",
-  "./index.html?v=8",
-  "./style.css?v=8",
-  "./app.js?v=8",
-  "./manifest.json",
-  "./icon-192-LK.png",
-  "./icon-512-LK.png"
+const CACHE_NAME = 'laxkollen-v14';
+const APP_SHELL = [
+  './',
+  './index.html',
+  './style.css?v=14',
+  './app.js?v=14',
+  './manifest.json',
+  './icons/icon-192-LK.png',
+  './icons/icon-512-LK.png'
 ];
 
-self.addEventListener("install", (event) => {
+// Dev-läge: stäng av caching på localhost/127.0.0.1 (Live Server)
+const DEV_HOSTS = ['localhost','127.0.0.1'];
+const IS_DEV = DEV_HOSTS.includes(self.location.hostname);
+
+
+self.addEventListener('install', e => {
+  if (IS_DEV) {
+    self.skipWaiting();
+    return;
+  }
+  e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(APP_SHELL)));
   self.skipWaiting();
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS))
+});
+self.addEventListener('activate', e => {
+  e.waitUntil(
+    caches.keys().then(keys => Promise.all(keys.filter(k=>k!==CACHE_NAME).map(k=>caches.delete(k)))),
   );
+  self.clients.claim();
 });
 
-self.addEventListener("activate", (event) => {
-  event.waitUntil((async () => {
-    const keys = await caches.keys();
-    await Promise.all(keys.map(k => (k !== CACHE_NAME) ? caches.delete(k) : Promise.resolve()));
-    await self.clients.claim();
-  })());
-});
+self.addEventListener('fetch', e => {
+  const req = e.request;
+  if (IS_DEV) {
+    // Inget cache i dev – alltid nätverk (Live Server)
+    e.respondWith(fetch(req));
+    return;
+  }
 
-self.addEventListener("fetch", (event) => {
-  const req = event.request;
-  // Only handle GET
-  if (req.method !== "GET") return;
+  const url = new URL(req.url);
+  // Only handle same-origin GET
+  if (req.method !== 'GET' || url.origin !== location.origin) return;
 
-  event.respondWith((async () => {
-    const cache = await caches.open(CACHE_NAME);
-    const cached = await cache.match(req, { ignoreSearch: false });
-    if (cached) return cached;
+  // For HTML/navigation, use network-first
+  if (req.mode === 'navigate') {
+    e.respondWith(
+      fetch(req).then(r=>{
+        const copy = r.clone();
+        caches.open(CACHE_NAME).then(c=>c.put('./', copy));
+        return r;
+      }).catch(()=>caches.match('./index.html'))
+    );
+    return;
+  }
 
-    try {
-      const fresh = await fetch(req);
-      // Cache same-origin navigation + static assets
-      const url = new URL(req.url);
-      if (url.origin === location.origin) {
-        // only cache basic responses
-        if (fresh && fresh.status === 200 && fresh.type === "basic") {
-          cache.put(req, fresh.clone());
-        }
-      }
-      return fresh;
-    } catch (e) {
-      // Offline fallback to app shell
-      const fallback = await cache.match("./index.html?v=8");
-      return fallback || Response.error();
-    }
-  })());
+  // For others, cache-first
+  e.respondWith(
+    caches.match(req).then(cached => cached || fetch(req).then(r => {
+      const copy = r.clone();
+      caches.open(CACHE_NAME).then(c=>c.put(req, copy));
+      return r;
+    }).catch(()=>cached))
+  );
 });

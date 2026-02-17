@@ -14,7 +14,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
 
-  <link rel="stylesheet" href="./style.css?v=8">
+  <link rel="stylesheet" href="./style.css?v=6">
 </head>
 <body>
 <div class="app">
@@ -45,18 +45,25 @@
       <label for="is-exam">Prov</label>
       <div class="checkline"><input id="is-exam" type="checkbox"/></div>
     </div>
+    <div class="field prov">
+      <label for="is-glossary">Glosor</label>
+      <div class="checkline"><input id="is-glossary" type="checkbox"/></div>
+    </div>
     <div class="field">
       <label for="due">Datum</label>
       <input id="due" type="date"/>
-    </div>
-    <div class="field">
-      <label for="times">Antal repitioner</label>
-      <input id="times" type="number" min="1" value="1"/>
     </div>
     <div class="field" style="justify-content:flex-end;">
       <button id="add" class="primary" disabled aria-disabled="true">Lägg till</button>
     </div>
   </div>
+<!-- Ny rad för repetitioner (dold från start) -->
+<div id="times-row" class="row" hidden style="margin-top:8px;">
+  <div class="field">
+    <label for="times">Antal repetitioner</label>
+    <input id="times" type="number" min="1" value="1"/>
+  </div>
+</div>
 
   <div class="row">
     <span class="chip active" data-filter="active">Kvar att göra</span>
@@ -70,33 +77,59 @@
 </div>
 
 <!-- Hantera barn -->
-<div id="modal-backdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="manage-title" hidden>
+<div id="modal-backdrop" class="modal-backdrop" hidden>
   <div class="modal">
-    <h2 id="manage-title">Hantera barn</h2>
-    <div class="note" id="onboarding-note" style="display:none;">Välkommen! Börja med att lägga till ett barn och välja ämnen. Du kan inte stänga förrän minst ett barn finns.</div>
+    <h2>Hantera barn</h2>
 
-    <div style="margin-top:10px;">
+    <div class="modal-body modal-body-scroll">
+
+    <!-- Informationsruta för onboarding -->
+    <div id="onboarding-note" style="font-size:13px; color:#777; margin-bottom:12px; display:none;">
+      Välkommen! Börja med att lägga till ett barn och välja ämnen.
+      Du kan inte stänga förrän minst ett barn finns.
+    </div>
+
+    <!-- LIST-LÄGE (standard) -->
+    <div id="children-list-area">
+      <div style="display:flex; justify-content:flex-start; align-items:center; margin-bottom:10px;">
+      <button id="open-child-editor" class="ghost" type="button">
+        <span style="font-weight:bold; margin-right:4px;">+</span> Lägg till barn
+      </button>
+    </div>
+    <div id="children-list"></div>
+  </div>
+
+    <!-- EDITOR-LÄGE (lägg till / redigera barn) -->
+    <div id="child-editor" hidden style="margin-top:12px;">
       <strong>Lägg till nytt barn</strong>
-      <div class="child-row">
-        <input id="new-child-name" type="text" placeholder="Barnets namn" style="min-width:200px;">
-        <div class="subjects-collection" id="new-child-subjects"></div>
-        <button id="save-new-child" class="primary">Lägg till barn</button>
+      <div style="margin-top:8px;">
+        <input id="new-child-name" type="text" placeholder="Barnets namn" style="width:100%; margin-bottom:12px;">
       </div>
 
-      <div class="modal-actions">
-        <button id="cancel-modal" class="ghost">Avbryt</button>
-        <button id="close-modal" class="primary">Spara och Stäng</button>
+      <div id="new-child-subjects"></div>
+      <div class="custom-subjects">
+        <div class="custom-subjects-title">Skapa eget ämne</div>
+        <div class="custom-subjects-form">
+          <input id="custom-subject-name" type="text" maxlength="24" placeholder="Ämnesnamn" aria-label="Ämnesnamn" />
+          <input id="custom-subject-icon" type="text" inputmode="text" maxlength="3" placeholder="Symbol" aria-label="Symbol (emoji)" />
+          <button id="custom-subject-add" type="button" class="ghost">Lägg till</button>
+          <button id="custom-subject-cancel" type="button" class="ghost" hidden>Avbryt</button>
+        </div>
+        <div id="custom-subject-list" class="custom-subject-list"></div>
       </div>
+
+    </div>
+    </div> <!-- /modal-body -->
+
+    <div class="modal-actions modal-actions-sticky">
+      <button id="close-modal" class="primary">Stäng</button>
+      <button id="cancel-new-child" class="ghost" type="button" style="display:none;">Avbryt</button>
+      <button id="save-new-child" class="primary" style="display:none;">Spara</button>
     </div>
 
-    <hr style="border:none;border-top:1px solid #eee;margin:12px 0;">
-
-    <div>
-      <strong>Aktuella barn</strong>
-      <div id="children-list"></div>
-    </div>
   </div>
 </div>
+
 
 <!-- Redigera -->
 <div id="edit-backdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="edit-title" hidden>
@@ -126,7 +159,7 @@
         <input id="edit-times" type="number" min="1" />
       </div>
     </div>
-    <div class="modal-actions">
+    <div class="modal-actions modal-actions-sticky">
       <button id="edit-cancel" class="ghost">Avbryt</button>
       <button id="edit-save" class="primary">Spara</button>
     </div>
@@ -135,11 +168,7 @@
 
 <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
-<!-- Supabase + QR (for family join) -->
-<script src="https://unpkg.com/@supabase/supabase-js@2.93.3/dist/umd/supabase.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
-
-<script src="./app.js?v=8" defer></script>
+<script src="./app.js?v=13" defer></script>
 <script>
 // Register SW
 if ('serviceWorker' in navigator) {

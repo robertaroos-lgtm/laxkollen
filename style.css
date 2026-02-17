@@ -134,8 +134,11 @@ li.exam .text { font-weight:700; }
 .progress-badge { font-size:12px; background:#eef0f6; border-radius:999px; padding:2px 8px; text-align:center; display:inline-block; min-width:60px; }
 
 .due-badge { font-size:12px; border-radius:999px; padding:2px 8px; background:#eef0f6; }
-.due-badge.today { background:#dbeafe; color:#1e40af; font-weight:600; }
+.due-badge.today { background:#fee2e2; color:#991b1b; font-weight:600; }
 .due-badge.overdue { background:#fee2e2; color:#991b1b; font-weight:600; }
+.due-badge.week-current { background:#dcfce7; color:#166534; font-weight:600; }
+.due-badge.week-next { background:#dbeafe; color:#1e40af; font-weight:600; }
+
 .exam-badge { font-size:11px; font-weight:800; letter-spacing:.3px; color:#7c2d12; background:#fde68a; border:1px solid #f59e0b; border-radius:6px; padding:2px 6px; white-space:nowrap; }
 
 /* Prov-ikon bredvid redigeringsknappen */
@@ -210,111 +213,156 @@ li.exam .text { font-weight:700; }
   .toast{ transition:none; }
 }
 
-/* ===============================
-   Family sync (Supabase) overlay
-   =============================== */
 
-.family-overlay{
-  position: fixed;
-  inset: 0;
-  z-index: 99999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 18px;
-  background: rgba(0,0,0,0.45);
-  backdrop-filter: blur(8px);
+/* Anpassning: Skapa eget ämne - mindre text i inputfält */
+.custom-subject-section input[type="text"],
+.custom-subject-section input[type="emoji"],
+.custom-subject-section .custom-input {
+  font-size: 14px;
+  padding: 8px 10px;
+  line-height: 1.2;
+  box-sizing: border-box;
 }
 
-.family-card{
-  width: min(480px, 100%);
-  background: #fff;
-  border-radius: 18px;
-  padding: 16px;
-  box-shadow: 0 12px 36px rgba(0,0,0,0.25);
-}
 
-.family-title{
-  font-size: 18px;
-  font-weight: 800;
-  margin-bottom: 8px;
-}
-
-.family-sub{
-  font-size: 13px;
-  color: rgba(0,0,0,0.65);
-  line-height: 1.35;
-}
-
-.family-label{
-  display:block;
-  font-size: 12px;
-  font-weight: 700;
-  margin: 12px 0 6px;
-  color: #222;
-}
-
-.family-input{
+/* iOS-lik stil: inputfält (Skapa eget ämne) */
+.custom-subject-section input[type="text"],
+.custom-subject-section .custom-input {
+  -webkit-appearance: none;
+  appearance: none;
   width: 100%;
-  padding: 12px 12px;
+  border: 1px solid rgba(60,60,67,0.18);
+  background: rgba(118,118,128,0.12);
   border-radius: 12px;
-  border: 1px solid rgba(0,0,0,0.15);
-  font-size: 16px;
+  color: #111;
   outline: none;
 }
 
-.family-actions{
+.custom-subject-section input[type="text"]:focus,
+.custom-subject-section .custom-input:focus {
+  border-color: rgba(0,122,255,0.45); /* iOS-blå fokus */
+  box-shadow: 0 0 0 4px rgba(0,122,255,0.12);
+}
+
+/* Placeholder som iOS */
+.custom-subject-section input::placeholder {
+  color: rgba(60,60,67,0.55);
+  opacity: 1;
+  font-weight: 400;
+}
+
+/* Emoji/symbolfält: centrera innehåll och gör smalare om layouten använder flex */
+.custom-subject-section .custom-subject-row input[name="customSubjectIcon"],
+.custom-subject-section .custom-icon-input {
+  text-align: center;
+}
+
+
+/* Layout: Egna ämnen-listan (under "Skapa eget ämne") ska ligga på en rad */
+.custom-subject-row {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 10px;
-  margin-top: 14px;
-}
-
-.family-primary, .family-secondary{
-  flex: 1;
-  border: none;
+  padding: 10px 12px;
   border-radius: 12px;
-  padding: 12px 10px;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.family-primary{ background:#111; color:#fff; }
-.family-secondary{ background:#f2f2f2; color:#111; }
-
-.family-msg{
-  margin-top: 10px;
-  font-size: 13px;
-  color: #444;
-  min-height: 18px;
-}
-
-.family-qr{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  margin-top: 12px;
-}
-
-.family-code{
+  background: rgba(118,118,128,0.08);
+  border: 1px solid rgba(60,60,67,0.12);
   margin-top: 8px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  font-size: 14px;
-  padding: 10px;
-  border-radius: 12px;
-  background: #f7f7f7;
-  border: 1px solid rgba(0,0,0,0.08);
-  text-align:center;
-  letter-spacing: 0.5px;
 }
 
-.family-smallbtn{
-  width: 100%;
-  margin-top: 10px;
-  border: none;
+.custom-subject-left {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.custom-subject-actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.custom-subject-actions .icon-btn {
+  width: 40px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(118,118,128,0.12);
+  border: 1px solid rgba(60,60,67,0.12);
+}
+
+
+/* Sticky knapprad (iOS-stil) i Hantera barn-modalen */
+.modal-actions-sticky,
+.modal-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  background: #fff;
+  padding: 12px 14px calc(12px + env(safe-area-inset-bottom));
+  border-top: 1px solid rgba(60,60,67,0.12);
+}
+
+/* Se till att modalen har en tydlig scroll-yta ovanför sticky-knapparna */
+.modal-body {
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  max-height: min(70vh, 620px);
+  padding-bottom: 14px;
+}
+
+/* iOS-lik stil för "Skapa eget ämne" (matchar HTML-klasserna) */
+.custom-subjects .custom-subjects-form input[type="text"] {
+  -webkit-appearance: none;
+  appearance: none;
+  border: 1px solid rgba(60,60,67,0.18);
+  background: rgba(118,118,128,0.12);
   border-radius: 12px;
-  padding: 10px;
-  font-weight: 800;
-  cursor: pointer;
-  background: #f2f2f2;
-  color: #111;
+  font-size: 14px;
+  padding: 8px 10px;
+  line-height: 1.2;
+  box-sizing: border-box;
+}
+
+.custom-subjects .custom-subjects-form input[type="text"]:focus {
+  border-color: rgba(0,122,255,0.45);
+  box-shadow: 0 0 0 4px rgba(0,122,255,0.12);
+  outline: none;
+}
+
+.custom-subjects .custom-subjects-form input::placeholder {
+  color: rgba(60,60,67,0.55);
+  opacity: 1;
+  font-weight: 400;
+}
+
+/* Lista med egna ämnen: en rad per ämne */
+.custom-subject-list .custom-subject-row,
+#custom-subject-list .custom-subject-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.custom-subject-list .custom-subject-row .custom-subject-left,
+#custom-subject-list .custom-subject-row .custom-subject-left {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.custom-subject-list .custom-subject-row .custom-subject-actions,
+#custom-subject-list .custom-subject-row .custom-subject-actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
